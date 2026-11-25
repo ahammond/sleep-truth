@@ -6,7 +6,7 @@
 
 **Architecture:** pnpm workspace with three packages. `core` is pure TypeScript: Oura docs to a nights file, nights file to a page model, page model to SVG. `web` is a single-file static page that loads a nights file and prints. `cli` logs in to Oura, caches raw sleep documents, and exports the nights file.
 
-**Tech Stack:** TypeScript 7, Node 24 LTS (via `mise.toml`), pnpm 11, Vitest 5, Vite 8 with `vite-plugin-singlefile` 2, `date-holidays` 3. No UI framework. CLI args via `node:util` `parseArgs`; HTTP via global `fetch`; OAuth callback via `node:http`.
+**Tech Stack:** TypeScript 7, Node 26 LTS (via `mise.toml`), pnpm 12, Vitest 5, Vite 8 with `vite-plugin-singlefile` 2, `date-holidays` 3. No UI framework. CLI args via `node:util` `parseArgs`; HTTP via global `fetch`; OAuth callback via `node:http`.
 
 **Spec:** [`docs/design/week-grid-mvp.md`](../design/week-grid-mvp.md). Mockup: [`docs/design/week-grid-mockup.html`](../design/week-grid-mockup.html).
 
@@ -20,7 +20,8 @@
 - Paper: US Letter landscape, two Sun-to-Sat weeks per page.
 - Time window per row: 20:00 on the evening's date to 12:00 the next day, local clock (960 minutes).
 - Stage order top to bottom: Awake, REM, Light, Deep. Fills: Awake `#ffffff` with `#000` outline, REM `#cfcfcf`, Light `#8c8c8c`, Deep `#2b2b2b`.
-- Every colour in rendered SVG is a gray (`#rrggbb` with r = g = b), `none`, or `url(#hatch)`.
+- Two palettes: `mono` (the default, for print) and `color` (screen). In `mono` every colour in rendered SVG is a gray (`#rrggbb` with r = g = b), `none`, or `url(#hatch)`. `color` changes stage fills only: Awake `#f6b26b`, REM `#7fc8f8`, Light `#3d85c6`, Deep `#1c2e6b`. Height still carries the stage in both.
+- Print shows only the sheets. Every interactive element (file picker, drop zone, range, region, palette toggle, Print button, error banner) is hidden in print.
 - Holiday region default: `CA` / `BC`. Holidays of `type === "public"` only.
 - Every Oura request sends `User-Agent: sleep-truth/0.1`.
 - Tokens file mode `0600`. Config under `$XDG_CONFIG_HOME/sleep-truth` (default `~/.config/sleep-truth`); cache under `$XDG_DATA_HOME/sleep-truth` (default `~/.local/share/sleep-truth`).
@@ -32,6 +33,7 @@
 3. **A period crossing the window edge** (asleep before 20:00, or past noon). Expected: drawn clipped; totals still use Oura's full values. Test in Task 3.
 4. **A date range starting mid-week or with missing nights.** Expected: full Sun-to-Sat weeks with empty `no data` rows; never a shifted column. Test in Task 3.
 5. **Oura revising a recent night, and paging.** Expected: re-sync overwrites the cached doc by `id`, and every `next_token` page is fetched. Test in Task 7.
+6. **Something interactive leaks into print,** such as a control added by `main.ts` at runtime outside the header. Expected: only sheets print, in either palette. Test in Task 6.
 
 Known gap, not a bug to fix here: `date-holidays` 3.39 lacks BC's National Day for Truth and Reconciliation (Sep 30).
 
@@ -53,7 +55,7 @@ Known gap, not a bug to fix here: `date-holidays` 3.39 lacks BC's National Day f
   - `parseNightsFile(input: unknown): NightsFile` throws `NightsFileError` (message names the first bad field)
   - `offsetMinutes(iso: string): number` (e.g. `-420` for `-07:00`)
 
-- [ ] **Step 1:** Scaffold. `mise.toml` pins `node = "24"` and `pnpm = "11"`. Root `package.json` is private, `"type": "module"`, scripts `test` (`vitest run`), `build` (`pnpm -r build`), `typecheck` (`tsc -b`). `pnpm-workspace.yaml` lists `packages/*` and `minimumReleaseAge: 20160`. `.gitignore`: `node_modules/`, `dist/`, `.superpowers/`, `*.nights.json`. Run `pnpm install`. Expected: lockfile written, no errors.
+- [ ] **Step 1:** Scaffold. `mise.toml` pins `node = "26"` and `pnpm = "12"`. Root `package.json` is private, `"type": "module"`, scripts `test` (`vitest run`), `build` (`pnpm -r build`), `typecheck` (`tsc -b`). `pnpm-workspace.yaml` lists `packages/*` and `minimumReleaseAge: 20160`. `.gitignore`: `node_modules/`, `dist/`, `.superpowers/`, `*.nights.json`. Run `pnpm install`. Expected: lockfile written, no errors.
 - [ ] **Step 2: Write the failing tests** in `nights.test.ts`:
   - `parses a valid file` round-trips a one-period file.
   - `rejects wrong schema` expects `NightsFileError` with `/schema/`.
@@ -180,13 +182,14 @@ Rules: `holidayName` when the row's evening date is a holiday. `hatch` covers `[
 
 **Interfaces:**
 - Consumes: `Page`, `RowMarkers`, `homeOffset` results.
-- Produces: `renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: { title: string; pageNo: number; pageCount: number; home: number | null }): string`. Returns one `<svg viewBox="0 0 1100 850">` document.
+- Produces: `renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: { title: string; pageNo: number; pageCount: number; home: number | null; palette?: "mono" | "color" }): string` (`palette` defaults to `mono`). Returns one `<svg viewBox="0 0 1100 850">` document.
 
 Port the drawing from `docs/design/week-grid-mockup.html` style A: layout constants, legend, week header with hour labels every 2 h, heavier midnight line, stage blocks with vertical connectors, movement runs as rects under the stages (heights 3 / 5.5 / 8 for levels 1 / 2 / 3), gutter weekday and date, `◆ name`, `✈ UTC-7 → UTC-5` plus dashed rule, `local UTC-5` for away rows, `no data` for empty rows, `+N nap` and `7h12 / 8h49` in the right column, footer disclaimer and `Page N of M`. Offsets format as `UTC-7`, `UTC+5:30`. All text is escaped.
 
 - [ ] **Step 1: Write the failing tests** (a fixture page built with Task 3/4 helpers):
   - `contains the disclaimer` (exact Global Constraints text) and `Page 1 of 1`.
-  - `only grays`: every `fill="…"` and `stroke="…"` value matches `/^(none|url\(#hatch\)|#([0-9a-f]{2})\1\1)$/i`.
+  - `only grays`: in `mono`, every `fill="…"` and `stroke="…"` value matches `/^(none|url\(#hatch\)|#([0-9a-f]{2})\1\1)$/i`.
+  - `color palette`: in `color`, the four stage fills appear and the layout (every non-colour attribute) equals the `mono` output.
   - `draws 14 row labels` for a two-week page, including `Fri` and `Nov 13`.
   - `shows totals` `7h12 / 8h49` for a row with `asleep_s 25920`, `in_bed_s 31740`.
   - `shows markers`: `◆ Remembrance Day`, `✈ UTC-7 → UTC-5`, `local UTC-5`, `no data`, `+1 nap`.
@@ -206,20 +209,22 @@ Port the drawing from `docs/design/week-grid-mockup.html` style A: layout consta
 **Interfaces:**
 - Consumes: `parseNightsFile`, `buildRows`, `groupWeeks`, `paginate`, `homeOffset`, `holidayMap`, `markRows`, `renderPage`.
 - Produces:
-  - `interface Settings { from?: ISODate; to?: ISODate; region: Region }`
+  - `interface Settings { from?: ISODate; to?: ISODate; region: Region; palette: "mono" | "color" }` (default `mono`)
   - `renderReport(fileText: string, settings: Settings): { pages: string[]; range: { from: ISODate; to: ISODate }; error?: string }` in `app.ts` (pure; `main.ts` wires the DOM)
 
-Behaviour: file picker and drag-and-drop read the file with `FileReader`; nothing else touches the data. Range defaults to the first and last evening in the file. Region select lists `date-holidays` countries, then states for the chosen country; default `CA`/`BC`. Settings (not data) persist in `localStorage` key `sleep-truth.settings`. A Print button calls `window.print()`. Errors from `parseNightsFile` show in the page. `index.html` carries `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">`. `print.css`: `@page { size: letter landscape; margin: 0.35in }`, one `.sheet` per page with `break-after: page`, controls hidden in print. Vite builds with `viteSingleFile()` to `packages/web/dist/index.html`.
+Behaviour: file picker and drag-and-drop read the file with `FileReader`; nothing else touches the data. Range defaults to the first and last evening in the file. Region select lists `date-holidays` countries, then states for the chosen country; default `CA`/`BC`. Settings (not data) persist in `localStorage` key `sleep-truth.settings`. A palette toggle switches `mono` / `color` and re-renders; print uses the palette on screen, so `mono` is the default. A Print button calls `window.print()`. Errors from `parseNightsFile` show in the page. `index.html` carries `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">`. `print.css`: `@page { size: letter landscape; margin: 0.35in }`, one `.sheet` per page with `break-after: page`. All interactive elements sit inside one `<header class="controls no-print">`, plus the error banner (`.no-print`); `@media print { .no-print { display: none !important } }`. Vite builds with `viteSingleFile()` to `packages/web/dist/index.html`.
 
 - [ ] **Step 1: Write the failing tests:**
   - `renderReport` on a two-week fixture file gives 1 page; on a three-week file gives 2.
   - `bad file gives an error, no throw`: `"{}"` sets `error` matching `/schema/`.
   - `range filter`: `to` before the last night drops later weeks.
+  - `palette`: `palette: "color"` pages contain `#3d85c6`; `mono` pages do not.
   - `build.test.ts` (runs after `pnpm -C packages/web build`): `dist/` holds exactly `index.html`; it has no `src="http`, `href="http`, or `<script src=`; it contains `connect-src 'none'`.
+  - `print hides controls`: in `index.html`, every `<input`, `<button`, `<select` and `<label` sits inside `<header class="controls no-print">`; the built CSS has a `@media print` rule hiding `.no-print`.
 - [ ] **Step 2:** Run `pnpm test -- web`. Expected: FAIL.
 - [ ] **Step 3:** Implement `app.ts`, `main.ts`, `index.html`, `print.css`, `vite.config.ts`. Add `build` script `vite build`.
 - [ ] **Step 4:** Run `pnpm -C packages/web build && pnpm test`. Expected: PASS.
-- [ ] **Step 5:** Manual check. Open `packages/web/dist/index.html` from `file://` in Chrome, load a fixture nights file, open print preview. Expected: Letter landscape, two weeks per sheet, readable with "Black and white" selected. DevTools Network tab shows no requests after load.
+- [ ] **Step 5:** Manual check. Open `packages/web/dist/index.html` from `file://` in Chrome, load a fixture nights file, open print preview. Expected: Letter landscape, two weeks per sheet, readable with "Black and white" selected, and no controls on the sheet. Toggle `color` and the screen re-renders in colour. DevTools Network tab shows no requests after load.
 - [ ] **Step 6:** Commit `feat(web): single-file page that loads a nights file and prints`.
 
 ### Task 7: CLI: login, sync, export

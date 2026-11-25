@@ -36,7 +36,7 @@ Non-goals (this iteration; most are later iterations):
 - Clinical metrics (efficiency, WASO, latency variance, regularity).
 - CSV or spreadsheet export for the doctor.
 - Personal day flags, Oura tags, calendar integration.
-- A4 paper, other wearables, colour themes.
+- A4 paper, other wearables, colour themes beyond the two palettes.
 
 Anti-goals (would make it a failure even if it works):
 
@@ -182,8 +182,12 @@ Location of config, tokens and cache: platform-standard user directories
 - Controls: date range (defaults to the whole file), holiday region
   (defaults to Canada / British Columbia). Choices may persist in
   `localStorage`; health data does not.
+- A palette toggle: printable (monotone, the default) or colour. Colour
+  changes stage fills only; height still carries the stage. Print uses
+  the palette on screen.
 - Prints through the browser's print dialog. Print CSS sets US Letter
-  landscape and one sheet per page; on-screen chrome is hidden in print.
+  landscape and one sheet per page. Every interactive element is hidden
+  in print; only the sheets print.
 - Plain TypeScript plus SVG, no UI framework. Vite builds it.
 
 ### 5.5 The printed page (approved by mockup)
