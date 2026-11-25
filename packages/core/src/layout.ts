@@ -105,6 +105,11 @@ function place(p: Period): { placement: Placement; localStart: number } {
   return { placement: { kind: "nap", evening: hour >= 12 ? startDate : addDays(startDate, -1) }, localStart };
 }
 
+/** The evening whose row a period belongs to (as a drawn night or as a nap). */
+export function eveningOf(p: Period): ISODate {
+  return place(p).placement.evening;
+}
+
 function runs<T extends string>(s: string, base: number, skip?: T): Array<{ value: T; from: number; to: number }> {
   const out: Array<{ value: T; from: number; to: number }> = [];
   let i = 0;

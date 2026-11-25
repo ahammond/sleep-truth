@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRows, groupWeeks, paginate, type Row } from "../src/index.ts";
+import { buildRows, eveningOf, groupWeeks, paginate, type Row } from "../src/index.ts";
 import { hours, period } from "./helpers/period.ts";
 
 function row(rows: Row[], evening: string): Row {
@@ -119,6 +119,13 @@ describe("buildRows", () => {
       { level: 1, from: 121, to: 121.5 },
       { level: 2, from: 121.5, to: 122 },
     ]);
+  });
+});
+
+describe("eveningOf", () => {
+  it("names the row a period lands on, naps included", () => {
+    expect(eveningOf(period({ start: "2026-11-19T01:10:00-07:00", stages: hours(6) }))).toBe("2026-11-18");
+    expect(eveningOf(period({ start: "2026-11-19T14:00:00-07:00", stages: hours(0.5) }))).toBe("2026-11-19");
   });
 });
 

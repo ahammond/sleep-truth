@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sleep Truth: week grid</title>
+  </head>
+  <body>
+    <header class="controls no-print">
+      <label class="file">Nights file <input id="file" type="file" accept=".json,application/json" /></label>
+      <span class="hint">or drop it anywhere on the page</span>
+      <label>From <input id="from" type="date" /></label>
+      <label>To <input id="to" type="date" /></label>
+      <label>Holidays <select id="country"></select></label>
+      <select id="state" aria-label="Region"></select>
+      <fieldset class="palette">
+        <legend>Look</legend>
+        <label><input type="radio" name="palette" value="mono" checked /> Printable</label>
+        <label><input type="radio" name="palette" value="color" /> Colour</label>
+      </fieldset>
+      <button id="print" type="button" disabled>Print</button>
+    </header>
+    <div id="error" class="error no-print" role="alert" hidden></div>
+    <p id="empty" class="empty no-print">
+      Load a nights file exported by <code>sleep-truth export</code>. It stays in this browser; nothing is uploaded.
+    </p>
+    <main id="sheets"></main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
