@@ -7,6 +7,7 @@ import { authorizeUrl, exchangeCode, readTokens, refresh, writeTokens, type Conf
 import { readDocs, writeDocs } from "./cache.ts";
 import { exportNights } from "./export.ts";
 import { OuraClient } from "./oura-client.ts";
+import { readPastedUrl } from "./paste.ts";
 import { paths } from "./paths.ts";
 
 const usage = `Usage:
@@ -50,11 +51,6 @@ async function redirectedUrlFromServer(port: number, expectedState: string, onLi
   });
 }
 
-async function redirectedUrlFromStdin(): Promise<URL> {
-  let value = "";
-  for await (const chunk of process.stdin) value += String(chunk);
-  return new URL(value.trim());
-}
 
 function openUrl(url: string): void {
   const child = spawn("open", [url], { detached: true, stdio: "ignore" });
@@ -68,7 +64,7 @@ async function login(paste: boolean): Promise<void> {
   const codeVerifier = verifier();
   const url = authorizeUrl(config, state, challenge(codeVerifier));
   console.log(url);
-  const callback = paste ? (console.log("Paste the redirected URL, then press Enter:"), await redirectedUrlFromStdin()) : await redirectedUrlFromServer(config.redirect_port, state, () => openUrl(url));
+  const callback = paste ? await readPastedUrl(process.stdin, process.stdout) : await redirectedUrlFromServer(config.redirect_port, state, () => openUrl(url));
   if (callback.searchParams.get("state") !== state) throw new Error("OAuth state did not match");
   const code = callback.searchParams.get("code");
   if (!code) throw new Error("OAuth callback did not include code");

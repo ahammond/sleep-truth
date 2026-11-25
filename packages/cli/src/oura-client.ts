@@ -1,7 +1,7 @@
 import type { OuraSleepDoc } from "@sleep-truth/core";
 import type { FetchFn } from "./auth.ts";
 
-type SleepResponse = { data?: OuraSleepDoc[]; next_token?: string };
+type SleepResponse = { data?: OuraSleepDoc[]; next_token?: string | null };
 export type SleepFn = (milliseconds: number) => Promise<void>;
 
 const endpoint = "https://api.ouraring.com/v2/usercollection/sleep";
@@ -52,7 +52,7 @@ export class OuraClient {
       if (!response.ok) throw new Error(`Oura sleep request failed: ${response.status} ${response.statusText}`);
       const body: unknown = await response.json();
       if (!isSleepResponse(body)) throw new Error("Oura sleep response has invalid data");
-      return { data: body.data ?? [], next_token: body.next_token };
+      return { data: body.data ?? [], next_token: body.next_token ?? undefined };
     }
   }
 }
@@ -60,5 +60,5 @@ export class OuraClient {
 function isSleepResponse(value: unknown): value is SleepResponse {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return (record.data === undefined || Array.isArray(record.data)) && (record.next_token === undefined || typeof record.next_token === "string");
+  return (record.data === undefined || Array.isArray(record.data)) && (record.next_token == null || typeof record.next_token === "string");
 }

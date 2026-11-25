@@ -3,7 +3,8 @@ import type { NightsFile, Period } from "./nights.ts";
 /** The fields of an Oura v2 `sleep` document that we use. */
 export interface OuraSleepDoc {
   id: string;
-  type: string;
+  /** Oura's schema allows null. */
+  type: string | null;
   day?: string;
   bedtime_start: string;
   bedtime_end: string;
@@ -52,7 +53,7 @@ function toPeriod(doc: OuraSleepDoc): Period | null {
     id: `oura:${doc.id}`,
     start: doc.bedtime_start,
     end: doc.bedtime_end,
-    source_type: doc.type,
+    source_type: doc.type ?? "unknown",
     epoch_seconds: 30,
     stages,
     movement: movementOf(doc, stages.length),
@@ -74,7 +75,7 @@ export function normalizeOura(docs: OuraSleepDoc[], exportedAt: Date): { file: N
   let skipped = 0;
   const periods: Period[] = [];
   for (const doc of byId.values()) {
-    if (DROPPED_TYPES.has(doc.type)) continue;
+    if (doc.type !== null && DROPPED_TYPES.has(doc.type)) continue;
     const p = toPeriod(doc);
     if (p) periods.push(p);
     else skipped++;

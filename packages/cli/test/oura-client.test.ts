@@ -55,3 +55,15 @@ describe("OuraClient", () => {
     await expect(client.listSleep("2026-01-01", "2026-01-02")).rejects.toThrow(/rate limit.*3/i);
   });
 });
+
+describe("OuraClient against the published response shape", () => {
+  it("accepts next_token: null on the last page", async () => {
+    const pages = [
+      { data: [{ id: "a" }], next_token: "second" },
+      { data: [{ id: "b" }], next_token: null },
+    ];
+    let i = 0;
+    const client = new OuraClient(async () => "token", async () => json(pages[i++]));
+    await expect(client.listSleep("2026-01-01", "2026-01-03")).resolves.toEqual([{ id: "a" }, { id: "b" }]);
+  });
+});

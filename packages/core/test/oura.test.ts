@@ -132,3 +132,12 @@ describe("normalizeOura", () => {
     expect(file.periods.map((p) => p.id)).toEqual(["oura:a", "oura:c", "oura:b"]);
   });
 });
+
+describe("normalizeOura with schema-legal nulls", () => {
+  it("null type becomes source_type unknown", () => {
+    const doc = { ...ouraDoc({ start: START, stages: "22" }), type: null };
+    const { file } = normalizeOura([doc], NOW);
+    expect(file.periods[0]?.source_type).toBe("unknown");
+    expect(() => parseNightsFile(JSON.parse(JSON.stringify(file)))).not.toThrow();
+  });
+});
