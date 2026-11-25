@@ -121,6 +121,28 @@ firmly.
 The full reasoning behind these choices — including the risks the project is
 tracking — lives in the [vision & MRD](vision-mrd.md).
 
+## Try it: the week-grid printout
+
+Needs [mise](https://mise.jdx.dev). It installs the pinned Node and pnpm.
+
+1. Register an Oura API application at
+   <https://cloud.ouraring.com/oauth/applications>. Set the redirect URI to
+   `http://localhost:8765/callback`.
+2. Write `~/.config/sleep-truth/config.json`:
+   `{ "client_id": "…", "client_secret": "…" }`
+3. Install and build: `mise exec -- pnpm install`, then
+   `mise exec -- pnpm -C packages/web build`.
+4. Log in and fetch: `mise exec -- pnpm -C packages/cli start -- login`, then
+   `mise exec -- pnpm -C packages/cli start -- sync`. If the browser cannot
+   reach the callback, use `login --paste` and paste the redirected URL.
+5. Export: `mise exec -- pnpm -C packages/cli start -- export --from 2026-11-01 --to 2026-11-28 -o ~/sleep.nights.json`.
+   Keep the file outside the repo.
+6. Open `packages/web/dist/index.html` in a browser and load the file. Pick
+   *Printable* or *Colour*, then Print. Choose US Letter, landscape.
+
+The page reads the file in the browser and sends nothing anywhere. Raw Oura
+data is cached in `~/.local/share/sleep-truth/`.
+
 ## License
 
 Apache 2.0 (planned). Permissive licensing is deliberate: the project's stated goal
