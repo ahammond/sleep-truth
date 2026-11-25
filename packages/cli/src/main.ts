@@ -85,7 +85,8 @@ async function sync(since: string | undefined): Promise<void> {
   const docs = await readDocs(location.cacheDir);
   const newest = docs.map((doc) => doc.day).filter((day): day is string => typeof day === "string").sort().at(-1);
   const start = since ?? (newest ? shiftDate(newest, -3) : shiftDate(utcDate(new Date()), -365));
-  const end = utcDate(new Date());
+  // One day past today, in case Oura treats end_date as exclusive.
+  const end = shiftDate(utcDate(new Date()), 1);
   let tokens: Tokens = await readTokens(location.tokens);
   const getToken = async (forceRefresh = false): Promise<string> => {
     if (forceRefresh || tokens.expires_at - Date.now() < 5 * 60_000) {
