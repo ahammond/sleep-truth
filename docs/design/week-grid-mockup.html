@@ -1,0 +1,238 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sleep Truth: week grid mockup</title>
+<style>
+  body { margin: 0; background: #6b6b6b; font: 14px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif; color: #111; }
+  .bar { position: sticky; top: 0; z-index: 2; background: #f4f4f4; border-bottom: 1px solid #ccc; padding: 10px 16px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .bar b { font-weight: 600; }
+  .seg { display: inline-flex; border: 1px solid #888; border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; background: #fff; padding: 5px 12px; cursor: pointer; font: inherit; border-right: 1px solid #ccc; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: #222; color: #fff; }
+  .pick { border: 1px solid #222; background: #fff; border-radius: 6px; padding: 5px 14px; cursor: pointer; font: inherit; }
+  .pick:hover { background: #222; color: #fff; }
+  .note { padding: 8px 16px; background: #f4f4f4; border-bottom: 1px solid #ccc; color: #444; font-size: 13px; }
+  .wrap { padding: 24px; display: flex; justify-content: center; }
+  .sheet { background: #fff; width: min(100%, 1320px); aspect-ratio: 11 / 8.5; box-shadow: 0 6px 30px rgba(0,0,0,.45); }
+  .sheet.harsh { filter: grayscale(1) contrast(9); }
+  .sheet svg { width: 100%; height: 100%; display: block; }
+  #sent { color: #070; font-size: 13px; }
+</style>
+<body>
+<div class="bar">
+  <span><b>Stage drawing</b></span>
+  <span class="seg" id="style">
+    <button data-v="blocks" class="on">A · Gray blocks (Oura-like)</button>
+    <button data-v="line">B · Step line</button>
+    <button data-v="lanes">C · Black lanes</button>
+  </span>
+  <label><input type="checkbox" id="harsh"> Simulate a harsh black-and-white laser printer</label>
+  <button class="pick" id="pick">Pick this style</button>
+  <span id="sent" style="color:#070">Chosen: A · Gray blocks</span>
+</div>
+<div class="note">
+  Mockup with <b>made-up data</b>, not your nights. One US-Letter landscape page holds two Sun→Sat weeks.
+  Rows are labelled by the evening the night starts. Hatching = time that falls on a holiday.
+  ◆ = holiday from a calendar, ◇ = a day you flagged yourself, ✈ = time zone changed.
+  Clock times are local wherever you slept.
+</div>
+<div class="wrap"><div class="sheet" id="sheet"></div></div>
+
+<script>
+// ---------- fake data ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const LEVEL = {W:0,R:1,L:2,D:3};
+
+function overwrite(segs, a, b, st){
+  const out=[];
+  for(const s of segs){
+    if(s.e<=a||s.s>=b){out.push(s);continue;}
+    if(s.s<a) out.push({st:s.st,s:s.s,e:a});
+    if(s.e>b) out.push({st:s.st,s:b,e:s.e});
+  }
+  out.push({st,s:a,e:b});
+  out.sort((x,y)=>x.s-y.s);
+  const m=[];
+  for(const s of out){const l=m[m.length-1]; if(l&&l.st===s.st&&Math.abs(l.e-s.s)<1e-9) l.e=s.e; else m.push({...s});}
+  return m;
+}
+
+function genPeriod(rand, bed, wake){
+  let segs=[], t=bed;
+  const lat=0.08+rand()*0.2;
+  segs.push({st:'W',s:t,e:t+lat}); t+=lat;
+  const fw=0.05+rand()*0.1, limit=wake-fw;
+  let k=0;
+  while(t<limit-0.02){
+    const cyc=(85+rand()*25)/60, end=Math.min(t+cyc,limit), len=end-t;
+    const deepF=Math.max(0,0.32-0.1*k)*(0.7+rand()*0.6);
+    const remF=Math.min(0.45,0.08+0.09*k)*(0.7+rand()*0.6);
+    const lightF=Math.max(0.1,1-deepF-remF);
+    const tot=deepF+remF+lightF;
+    const parts=[['L',lightF*0.55],['D',deepF],['L',lightF*0.45],['R',remF]];
+    let u=t;
+    for(const [st,f] of parts){const d=len*f/tot; if(d>0.02){segs.push({st,s:u,e:u+d});} u+=d;}
+    segs[segs.length-1].e=end; t=end; k++;
+  }
+  segs.push({st:'W',s:limit,e:wake});
+  const n=Math.floor((wake-bed)*(1.0+rand()*1.6));
+  for(let i=0;i<n;i++){const at=bed+lat+rand()*(limit-bed-lat-0.1); const d=(1+rand()*5)/60; segs=overwrite(segs,at,at+d,'W');}
+  // merge
+  const m=[]; for(const s of segs){const l=m[m.length-1]; if(l&&l.st===s.st) l.e=s.e; else m.push({...s});}
+  return m;
+}
+
+function genMoves(rand, segs){
+  const mv=[];
+  for(const s of segs){
+    if(s.st==='W') mv.push({t:s.s+0.005,lvl:rand()<0.5?4:3});
+    else { for(let t=s.s; t<s.e; t+=1/6){ if(rand()<0.10) mv.push({t,lvl:rand()<0.8?2:3}); } }
+  }
+  return mv;
+}
+
+function night(seed, periods){
+  const rand=mulberry32(seed); let segs=[], inbed=0, asleep=0;
+  for(const [b,w] of periods){ const p=genPeriod(rand,b,w); segs.push(...p); inbed+=w-b; }
+  for(const s of segs) if(s.st!=='W') asleep+=s.e-s.s;
+  return {segs, moves:genMoves(rand,segs), inbed, asleep, periods};
+}
+
+const HOME='UTC-7';
+const weeks=[
+  {label:'Week of Nov 8', nights:[
+    {dow:'Sun',date:'Nov 8', p:[[22.3,30.4]]},
+    {dow:'Mon',date:'Nov 9', p:[[22.6,30.5]]},
+    {dow:'Tue',date:'Nov 10',p:[[22.9,32.6]], holiday:[[24,36]]},
+    {dow:'Wed',date:'Nov 11',p:[[23.4,30.5]], holiday:[[20,24]], mark:{g:'◆',t:'Remembrance Day'}},
+    {dow:'Thu',date:'Nov 12',p:[[22.5,30.4]]},
+    {dow:'Fri',date:'Nov 13',p:[[24.6,32.9]], mark:{g:'◇',t:'Late event'}},
+    {dow:'Sat',date:'Nov 14',p:[[24.9,33.6]]},
+  ]},
+  {label:'Week of Nov 15', nights:[
+    {dow:'Sun',date:'Nov 15',p:[[22.7,30.4]]},
+    {dow:'Mon',date:'Nov 16',p:[[22.2,26.9],[27.6,30.5]], mark:{g:'',t:'2 sleep periods'}},
+    {dow:'Tue',date:'Nov 17',p:[[22.5,30.4]]},
+    {dow:'Wed',date:'Nov 18',p:[[23.0,30.4]]},
+    {dow:'Thu',date:'Nov 19',p:[[24.8,31.9]], tz:'UTC-5', mark:{g:'✈',t:'UTC-7 → UTC-5'}},
+    {dow:'Fri',date:'Nov 20',p:[[24.3,31.5]], tz:'UTC-5'},
+    {dow:'Sat',date:'Nov 21',p:[[25.2,33.2]], tz:'UTC-5'},
+  ]},
+];
+let seed=11; for(const w of weeks) for(const n of w.nights) n.data=night(seed++*7919, n.p);
+
+// ---------- rendering ----------
+const W=1100,H=850, GX=34, CX=168, CW=760, SX=948, T0=20, T1=36;
+const x=t=>CX+(t-T0)/(T1-T0)*CW;
+const fmt=h=>{let hh=Math.floor(h), mm=Math.round((h-hh)*60); if(mm===60){hh++;mm=0;} return hh+'h'+String(mm).padStart(2,'0');};
+const hourLbl=t=>{const h=((t%24)+24)%24; const ap=h<12?'a':'p'; const hh=h%12===0?12:h%12; return hh+ap;};
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+const FILL={W:'#ffffff',R:'#cfcfcf',L:'#8c8c8c',D:'#2b2b2b'};
+
+function drawStages(style, segs, y0){
+  const bh=7.5; let s='';
+  if(style==='lanes'){
+    for(let i=0;i<4;i++) s+=`<rect x="${CX}" y="${y0+i*bh}" width="${CW}" height="${bh}" fill="${i%2?'#f3f3f3':'#fafafa'}"/>`;
+    for(const g of segs){ s+=`<rect x="${x(g.s)}" y="${y0+LEVEL[g.st]*bh+0.6}" width="${Math.max(0.6,x(g.e)-x(g.s))}" height="${bh-1.2}" fill="#000"/>`; }
+    return s;
+  }
+  if(style==='line'){
+    for(let i=1;i<4;i++) s+=`<line x1="${CX}" x2="${CX+CW}" y1="${y0+i*bh}" y2="${y0+i*bh}" stroke="#eee" stroke-width="0.5"/>`;
+    let d='';
+    segs.forEach((g,i)=>{const yy=y0+LEVEL[g.st]*bh+bh/2; d+= (i===0?`M${x(g.s)},${yy}`:`V${yy}`)+`H${x(g.e)}`;});
+    // break the path between separate periods
+    const parts=[]; let cur=[];
+    segs.forEach((g,i)=>{ if(i>0 && g.s-segs[i-1].e>1e-6){parts.push(cur);cur=[];} cur.push(g);});
+    parts.push(cur);
+    for(const p of parts){ let dd=''; p.forEach((g,i)=>{const yy=y0+LEVEL[g.st]*bh+bh/2; dd+=(i===0?`M${x(g.s)},${yy}`:`V${yy}`)+`H${x(g.e)}`;}); s+=`<path d="${dd}" fill="none" stroke="#000" stroke-width="1.3" stroke-linejoin="miter"/>`; }
+    return s;
+  }
+  // blocks
+  segs.forEach((g,i)=>{
+    const yy=y0+LEVEL[g.st]*bh;
+    s+=`<rect x="${x(g.s)}" y="${yy}" width="${Math.max(0.6,x(g.e)-x(g.s))}" height="${bh}" fill="${FILL[g.st]}" stroke="${g.st==='W'?'#000':'none'}" stroke-width="0.6"/>`;
+    const p=segs[i-1];
+    if(p && Math.abs(p.e-g.s)<1e-6){
+      const a=y0+LEVEL[p.st]*bh, b=yy, top=Math.min(a,b), bot=Math.max(a,b)+bh;
+      s+=`<line x1="${x(g.s)}" x2="${x(g.s)}" y1="${top}" y2="${bot}" stroke="#000" stroke-width="0.5"/>`;
+    }
+  });
+  return s;
+}
+
+function drawMoves(moves, y){
+  let s=`<line x1="${CX}" x2="${CX+CW}" y1="${y+8}" y2="${y+8}" stroke="#ccc" stroke-width="0.5"/>`;
+  const hgt={2:3,3:5.5,4:8};
+  for(const m of moves) s+=`<line x1="${x(m.t)}" x2="${x(m.t)}" y1="${y+8-hgt[m.lvl]}" y2="${y+8}" stroke="#000" stroke-width="${m.lvl===4?1.1:0.7}"/>`;
+  return s;
+}
+
+function render(style){
+  let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Arial, sans-serif">`;
+  s+=`<defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="#b5b5b5" stroke-width="1.4"/></pattern></defs>`;
+  s+=`<rect width="${W}" height="${H}" fill="#fff"/>`;
+  // title + legend
+  s+=`<text x="${GX}" y="44" font-size="20" font-weight="600">Sleep, night by night · Nov 8 – Nov 21, 2026</text>`;
+  s+=`<text x="${GX}" y="62" font-size="10.5" fill="#444">Oura Ring · 30-second stages · local clock time · rows start on the evening shown</text>`;
+  const lx=590, ly=30;
+  const stages=[['W','Awake'],['R','REM'],['L','Light'],['D','Deep']];
+  s+=`<text x="${lx}" y="${ly}" font-size="10" fill="#444">Stage (top = awake)</text>`;
+  stages.forEach(([k,lab],i)=>{
+    const yy=ly+5+i*10;
+    let sw;
+    if(style==='lanes') sw=`<rect x="${lx}" y="${yy+0.6}" width="22" height="6.3" fill="#000"/>`;
+    else if(style==='line') sw=`<line x1="${lx}" x2="${lx+22}" y1="${yy+3.75}" y2="${yy+3.75}" stroke="#000" stroke-width="1.3"/>`;
+    else sw=`<rect x="${lx}" y="${yy}" width="22" height="7.5" fill="${FILL[k]}" stroke="${k==='W'?'#000':'none'}" stroke-width="0.6"/>`;
+    s+=sw+`<text x="${lx+28}" y="${yy+6.5}" font-size="8.5">${lab}</text>`;
+  });
+  s+=`<text x="${lx+120}" y="${ly}" font-size="10" fill="#444">Movement</text>`;
+  [[2,'restless'],[3,'tossing'],[4,'active']].forEach(([l,lab],i)=>{const yy=ly+15+i*12; const hh={2:3,3:5.5,4:8}[l]; s+=`<line x1="${lx+122}" x2="${lx+122}" y1="${yy-hh}" y2="${yy}" stroke="#000" stroke-width="${l===4?1.1:0.7}"/><text x="${lx+130}" y="${yy}" font-size="8.5">${lab}</text>`;});
+  s+=`<text x="${lx+220}" y="${ly}" font-size="10" fill="#444">Markers</text>`;
+  [['◆','holiday'],['◇','your flag'],['✈','time zone change']].forEach(([g,lab],i)=>{const yy=ly+15+i*12; s+=`<text x="${lx+222}" y="${yy}" font-size="9">${g}</text><text x="${lx+235}" y="${yy}" font-size="8.5">${lab}</text>`;});
+  s+=`<text x="${lx+345}" y="${ly}" font-size="10" fill="#444">Holiday hours</text><rect x="${lx+345}" y="${ly+7}" width="30" height="12" fill="url(#hatch)" stroke="#bbb" stroke-width="0.5"/>`;
+
+  let y=96;
+  for(const wk of weeks){
+    // week header with hour labels
+    s+=`<text x="${GX}" y="${y+10}" font-size="11" font-weight="600">${esc(wk.label)}</text>`;
+    for(let t=T0;t<=T1;t+=2){ s+=`<text x="${x(t)}" y="${y+10}" font-size="9" text-anchor="middle" fill="#333">${hourLbl(t)}</text>`; }
+    s+=`<text x="${SX}" y="${y+10}" font-size="9" fill="#333">asleep / in bed</text>`;
+    const top=y+16, rowH=48, bottom=top+7*rowH-6;
+    for(let t=T0;t<=T1;t+=1){ const major=(t%2===0); s+=`<line x1="${x(t)}" x2="${x(t)}" y1="${top}" y2="${bottom}" stroke="${t===24?'#888':major?'#d6d6d6':'#eeeeee'}" stroke-width="${t===24?0.9:0.6}" ${t===24?'':'stroke-dasharray="'+(major?'':'1.5,2')+'"'}/>`; }
+    wk.nights.forEach((n,i)=>{
+      const y0=top+i*rowH;
+      for(const [a,b] of (n.holiday||[])) s+=`<rect x="${x(a)}" y="${y0-2}" width="${x(b)-x(a)}" height="44" fill="url(#hatch)" opacity="0.8"/>`;
+      // gutter
+      s+=`<text x="${GX}" y="${y0+12}" font-size="12" font-weight="600">${n.dow}</text><text x="${GX+30}" y="${y0+12}" font-size="12">${n.date}</text>`;
+      if(n.mark) s+=`<text x="${GX}" y="${y0+26}" font-size="9">${n.mark.g?n.mark.g+' ':''}${esc(n.mark.t)}</text>`;
+      if(n.tz && n.tz!==HOME && !(n.mark&&n.mark.g==='✈')) s+=`<text x="${GX}" y="${y0+26}" font-size="9" fill="#555">local ${n.tz}</text>`;
+      if(n.mark && n.mark.g==='✈') s+=`<line x1="${CX-6}" x2="${CX+CW}" y1="${y0-3.5}" y2="${y0-3.5}" stroke="#000" stroke-width="0.8" stroke-dasharray="4,2"/>`;
+      s+=drawStages(style, n.data.segs, y0);
+      s+=drawMoves(n.data.moves, y0+31);
+      s+=`<text x="${SX}" y="${y0+18}" font-size="11.5"><tspan font-weight="600">${fmt(n.data.asleep)}</tspan> / ${fmt(n.data.inbed)}</text>`;
+      if(i<6) s+=`<line x1="${GX}" x2="${W-GX}" y1="${y0+rowH-4}" y2="${y0+rowH-4}" stroke="#f0f0f0" stroke-width="0.5"/>`;
+    });
+    y=bottom+22;
+  }
+  s+=`<text x="${GX}" y="${H-22}" font-size="8.5" fill="#444">Not a diagnostic tool. Shows data recorded by a consumer wearable; stages are Oura's estimates, not polysomnography.</text>`;
+  s+=`<text x="${W-GX}" y="${H-22}" font-size="8.5" fill="#444" text-anchor="end">Page 1 of 1 · sleep-truth</text>`;
+  s+='</svg>';
+  document.getElementById('sheet').innerHTML=s;
+}
+
+let style='blocks';
+document.querySelectorAll('#style button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#style button').forEach(z=>z.classList.remove('on'));
+  b.classList.add('on'); style=b.dataset.v; render(style);
+});
+document.getElementById('harsh').onchange=e=>document.getElementById('sheet').classList.toggle('harsh',e.target.checked);
+document.getElementById('pick').onclick=()=>{
+  const harsh=document.getElementById('harsh').checked;
+  const summary=`Picked stage style ${style}`;
+  const ok = (window.herdr && herdr.send) ? herdr.send(summary,{style,harshPreviewOn:harsh}) : false;
+  document.getElementById('sent').textContent = ok ? 'Queued in the notes panel. Press "Send to agent".' : 'Tell the agent in the terminal: '+summary;
+};
+render(style);
+</script>
+</body>
