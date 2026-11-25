@@ -1,0 +1,9 @@
+{
+  "name": "@sleep-truth/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "sleep-truth": "src/main.ts" },
+  "scripts": { "start": "node src/main.ts" },
+  "dependencies": { "@sleep-truth/core": "workspace:*" }
+}

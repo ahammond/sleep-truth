@@ -1,0 +1,62 @@
+import { mkdtemp, readFile, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { authorizeUrl, exchangeCode, refresh, writeTokens, type Config, type Tokens } from "../src/auth.ts";
+
+const config: Config = { client_id: "client id", client_secret: "secret value", redirect_port: 8765 };
+
+function response(body: unknown): Response {
+  return new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
+}
+
+describe("auth", () => {
+  it("builds an encoded authorization URL with all required parameters", () => {
+    const url = new URL(authorizeUrl(config, "state value", "challenge+/="));
+    expect(url.origin + url.pathname).toBe("https://cloud.ouraring.com/oauth/authorize");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      response_type: "code",
+      redirect_uri: "http://localhost:8765/callback",
+      scope: "daily",
+      code_challenge_method: "S256",
+      client_id: "client id",
+      state: "state value",
+      code_challenge: "challenge+/=",
+    });
+  });
+
+  it("exchanges an authorization code with a form post", async () => {
+    let request: Request | undefined;
+    const tokens = await exchangeCode(config, "the code", "verifier", async (input, init) => {
+      request = new Request(input, init);
+      return response({ access_token: "access", refresh_token: "refresh", expires_in: 60 });
+    }, () => 1_000);
+    expect(tokens).toEqual({ access_token: "access", refresh_token: "refresh", expires_at: 61_000 });
+    expect(request?.url).toBe("https://api.ouraring.com/oauth/token");
+    expect(request?.method).toBe("POST");
+    expect(request?.headers.get("content-type")).toContain("application/x-www-form-urlencoded");
+    expect(Object.fromEntries(new URLSearchParams(await request?.text()))).toEqual({
+      grant_type: "authorization_code", code: "the code", code_verifier: "verifier",
+      redirect_uri: "http://localhost:8765/callback", client_id: "client id", client_secret: "secret value",
+    });
+  });
+
+  it("refreshes with the rotated refresh token", async () => {
+    let request: Request | undefined;
+    const tokens = await refresh(config, { access_token: "old", refresh_token: "old refresh", expires_at: 0 }, async (input, init) => {
+      request = new Request(input, init);
+      return response({ access_token: "new", refresh_token: "rotated", expires_in: 30 });
+    }, () => 500);
+    expect(tokens).toEqual({ access_token: "new", refresh_token: "rotated", expires_at: 30_500 });
+    expect(Object.fromEntries(new URLSearchParams(await request?.text()))).toMatchObject({ grant_type: "refresh_token", refresh_token: "old refresh" });
+  });
+
+  it("writes tokens with mode 0600", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "sleep-truth-auth-"));
+    const path = join(dir, "tokens.json");
+    const tokens: Tokens = { access_token: "access", refresh_token: "refresh", expires_at: 1 };
+    await writeTokens(path, tokens);
+    expect(JSON.parse(await readFile(path, "utf8"))).toEqual(tokens);
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
+  });
+});
