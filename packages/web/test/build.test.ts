@@ -37,4 +37,9 @@ describe("single-file build", () => {
     expect(html).toMatch(/@media print/);
     expect(html).toMatch(/\.no-print\s*{\s*display:\s*none\s*!important/);
   });
+
+  it("contains no network call at all, not even an inert one", () => {
+    expect(html).not.toMatch(/\bfetch\(/);
+    expect(html).not.toMatch(/XMLHttpRequest|sendBeacon|WebSocket/);
+  });
 });

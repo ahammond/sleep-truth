@@ -145,12 +145,43 @@ function drawLegend(fills: Record<Stage, string>): string {
   return s;
 }
 
+/** Characters of 9 pt text that fit between the date column and the timeline. */
+const GUTTER_CHARS = 26;
+const GUTTER_LINES = 2;
+
+/** Word-wraps `prefix text` into at most `max` lines of GUTTER_CHARS, ending in … if it is cut. */
+function wrap(prefix: string, text: string, max: number): string[] {
+  const words = text.split(/\s+/);
+  // The prefix glyph never sits alone on a line.
+  words[0] = `${prefix} ${words[0]}`;
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length <= GUTTER_CHARS) {
+      line = next;
+      continue;
+    }
+    if (line) lines.push(line);
+    line = word;
+  }
+  if (line) lines.push(line);
+  if (lines.length <= max && lines.every((l) => l.length <= GUTTER_CHARS)) return lines;
+  const kept = lines.slice(0, max);
+  const last = kept.length - 1;
+  kept[last] = `${kept[last]!.slice(0, GUTTER_CHARS - 1).trimEnd()}…`;
+  return kept;
+}
+
 function gutterNotes(m: RowMarkers | undefined): string[] {
-  const notes: string[] = [];
-  if (!m) return notes;
-  if (m.holidayName) notes.push(`◆ ${m.holidayName}`);
-  if (m.tzChange) notes.push(`✈ ${formatOffset(m.tzChange.from)} → ${formatOffset(m.tzChange.to)}`);
-  else if (m.away !== undefined) notes.push(`local ${formatOffset(m.away)}`);
+  if (!m) return [];
+  const offsetNote = m.tzChange
+    ? `✈ ${formatOffset(m.tzChange.from)} → ${formatOffset(m.tzChange.to)}`
+    : m.away !== undefined
+      ? `local ${formatOffset(m.away)}`
+      : undefined;
+  const notes = m.holidayName ? wrap("◆", m.holidayName, offsetNote ? GUTTER_LINES - 1 : GUTTER_LINES) : [];
+  if (offsetNote) notes.push(offsetNote);
   return notes;
 }
 

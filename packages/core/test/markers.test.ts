@@ -102,3 +102,26 @@ describe("homeOffset", () => {
     expect(homeOffset(fakeRows([null, null]))).toBeNull();
   });
 });
+
+describe("clock changes are not travel", () => {
+  it("a one-hour shift that runs to the edge of the range is not labelled away", () => {
+    const m = markRows(fakeRows([-420, -420, -420, -480, -480]), new Map());
+    expect(m[3]?.tzChange).toEqual({ from: -420, to: -480 });
+    expect(m.map((x) => x.away)).toEqual([undefined, undefined, undefined, undefined, undefined]);
+  });
+
+  it("the same at the start of the range, across an empty row", () => {
+    const m = markRows(fakeRows([-480, null, -420, -420, -420]), new Map());
+    expect(m.map((x) => x.away)).toEqual([undefined, undefined, undefined, undefined, undefined]);
+  });
+
+  it("a one-hour trip that comes back is still labelled away", () => {
+    const m = markRows(fakeRows([-420, -360, -360, -420, -420]), new Map());
+    expect(m.map((x) => x.away)).toEqual([undefined, -360, -360, undefined, undefined]);
+  });
+
+  it("a bigger shift to the edge is still labelled away", () => {
+    const m = markRows(fakeRows([-420, -420, -420, -300, -300]), new Map());
+    expect(m.map((x) => x.away)).toEqual([undefined, undefined, undefined, -300, -300]);
+  });
+});

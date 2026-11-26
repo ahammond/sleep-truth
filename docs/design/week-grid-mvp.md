@@ -230,12 +230,17 @@ data. Andrew picked drawing style A.
   previous evening's row). The holiday's date runs midnight to midnight
   on each row's own local clock, so travel nights hatch the date as it
   was lived. Source: the `date-holidays` library, region configurable.
+  A name too long for the gutter wraps to a second line when the row has
+  no other note, and ends in … where it still does not fit.
 - **Row offset:** a row's UTC offset is the start offset of its longest
   period. It positions the row's window and drives the markers below.
 - **Time zone changes:** when a row's UTC offset differs from the
   previous row's, draw ✈ with `UTC-7 → UTC-5` in the gutter and a dashed
-  rule above the row. Rows whose offset differs from the most common
-  offset in the range ("home") say `local UTC-5` in the gutter.
+  rule below the row, between it and the earlier night. Rows whose offset
+  differs from the most common offset in the range ("home") say
+  `local UTC-5` in the gutter. The exception is a daylight-saving change:
+  a run of rows one hour off home that reaches either end of the range
+  gets the ✈ but no `local` label.
 - **Header:** title with the date range, a one-line source note, and a
   legend for stages, movement, markers and holiday hatching.
 - **Footer on every page:** the not-a-diagnostic-tool disclaimer and

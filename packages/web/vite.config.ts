@@ -7,5 +7,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // One inline file has no chunks to preload; the polyfill only adds a fetch().
+    modulePreload: { polyfill: false },
   },
 });

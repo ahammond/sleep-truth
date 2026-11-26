@@ -58,11 +58,35 @@ function longestPlaced(r: Row) {
   return best;
 }
 
+/**
+ * A run of away rows that is an hour off home and reaches the first or last
+ * row with data reads as a daylight-saving change, not a trip: the clock moved
+ * and never moved back inside the range. Its rows lose the "away" label; the
+ * ✈ line still marks where the change happened.
+ */
+function clearClockChanges(rows: Row[], marks: RowMarkers[], home: number): void {
+  const withData = rows.flatMap((r, i) => (r.offset === null ? [] : [i]));
+  let k = 0;
+  while (k < withData.length) {
+    if (marks[withData[k]!]!.away === undefined) {
+      k++;
+      continue;
+    }
+    const start = k;
+    while (k < withData.length && marks[withData[k]!]!.away !== undefined) k++;
+    const run = withData.slice(start, k);
+    const atEdge = start === 0 || k === withData.length;
+    if (atEdge && run.every((i) => Math.abs(rows[i]!.offset! - home) === 60)) {
+      for (const i of run) delete marks[i]!.away;
+    }
+  }
+}
+
 /** Markers for each row, same order as `rows`. */
 export function markRows(rows: Row[], holidays: Map<ISODate, string>): RowMarkers[] {
   const home = homeOffset(rows);
   let last: number | null = null;
-  return rows.map((r) => {
+  const marks = rows.map((r) => {
     const m: RowMarkers = { hatch: [] };
     const today = holidays.get(r.evening);
     const tomorrow = holidays.get(addDays(r.evening, 1));
@@ -86,4 +110,6 @@ export function markRows(rows: Row[], holidays: Map<ISODate, string>): RowMarker
     }
     return m;
   });
+  if (home !== null) clearClockChanges(rows, marks, home);
+  return marks;
 }

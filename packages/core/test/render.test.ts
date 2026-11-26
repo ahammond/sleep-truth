@@ -154,3 +154,44 @@ describe("renderPage", () => {
     expect(svg).toMatchSnapshot();
   });
 });
+
+describe("gutter notes fit the gutter", () => {
+  const long = "National Day for Truth and Reconciliation";
+
+  function gutterLines(marker: RowMarkers): string[] {
+    const { page, markers, home } = fixture();
+    markers.set("2026-11-09", marker);
+    const svg = renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home });
+    const row = svg.split(">Nov 9<")[1]!.split(/>(Sun|Mon|Tue|Wed|Thu|Fri|Sat)</)[0]!;
+    return [...row.matchAll(/font-size="9">([^<]*)</g)].map((m) => m[1]!);
+  }
+
+  it("wraps a long holiday name onto two lines", () => {
+    const lines = gutterLines({ holidayName: long, hatch: [] });
+    expect(lines).toEqual(["◆ National Day for Truth", "and Reconciliation"]);
+  });
+
+  it("shortens it to one line when a time zone note needs the second", () => {
+    const lines = gutterLines({ holidayName: long, hatch: [], tzChange: { from: -420, to: -300 } });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^◆ National Day for .*…$/);
+    expect(lines[1]).toBe("✈ UTC-7 → UTC-5");
+  });
+
+  it("keeps every line within the gutter width", () => {
+    for (const lines of [gutterLines({ holidayName: long, hatch: [] }), gutterLines({ holidayName: "x".repeat(80), hatch: [] })]) {
+      for (const line of lines) expect(line.length).toBeLessThanOrEqual(26);
+    }
+  });
+});
+
+describe("gutter wrapping edge", () => {
+  it("never leaves the ◆ alone on a line", () => {
+    const { page, markers, home } = fixture();
+    markers.set("2026-11-09", { holidayName: "x".repeat(80), hatch: [] });
+    const svg = renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home });
+    const row = svg.split(">Nov 9<")[1]!.split(/>(Sun|Mon|Tue|Wed|Thu|Fri|Sat)</)[0]!;
+    expect(row).not.toMatch(/>◆</);
+    expect(row).toMatch(/>◆ x+…</);
+  });
+});
