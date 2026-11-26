@@ -109,13 +109,12 @@ body.dragging #sheets {
   }
 
   .disclaimer {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding: 0 0.35in 0.08in;
-    background: #fff;
     font-size: 8.5pt;
+  }
+
+  /* Each sheet's SVG carries the disclaimer, so the page footer would only repeat it. */
+  body:has(.sheet) .disclaimer {
+    display: none;
   }
 
   #sheets {

@@ -12,6 +12,10 @@ export interface RenderContext {
   palette?: Palette;
 }
 
+/** Baked into every rendered page, so no browser or setting can drop it from a printout. */
+export const DISCLAIMER =
+  "Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not medical advice.";
+
 // Layout constants, ported from docs/design/week-grid-mockup.html style A.
 const W = 1100;
 const H = 850;
@@ -211,6 +215,7 @@ export function renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: R
     });
     y = bottom + 22;
   }
+  s += `<text x="${GX}" y="${H - 22}" font-size="8.5" fill="#444444">${escapeXml(DISCLAIMER)}</text>`;
   s += `<text x="${W - GX}" y="${H - 22}" font-size="8.5" fill="#444444" text-anchor="end">Page ${ctx.pageNo} of ${ctx.pageCount} · sleep-truth</text>`;
   s += "</svg>";
   return s;

@@ -102,9 +102,14 @@ describe("print hides controls", () => {
     expect(footer?.[0]).not.toMatch(/\bno-print\b/);
   });
 
-  it("repeats the disclaimer on printed pages without hiding it", () => {
-    expect(css).not.toMatch(/\.disclaimer\s*{[^}]*display:\s*none/);
-    expect(css).toMatch(/@media print\s*{[^]*\.disclaimer\s*{[^}]*position:\s*fixed/);
+  it("hides the page footer in print only when sheets carry their own disclaimer", () => {
+    // Each rendered sheet bakes the disclaimer into its SVG (core render test), so a
+    // printed page never depends on the browser repeating a fixed element.
+    const hides = [...css.matchAll(/([^{}]*)\{[^}]*display:\s*none[^}]*\}/g)].map((m) => (m[1] ?? "").trim());
+    for (const selector of hides.filter((s) => /\.disclaimer/.test(s))) {
+      expect(selector).toMatch(/:has\(\.sheet\)/);
+    }
+    expect(css).toMatch(/@media print\s*{[^]*body:has\(\.sheet\) \.disclaimer\s*{[^}]*display:\s*none/);
   });
 
   it("main.ts creates no interactive elements at runtime", () => {

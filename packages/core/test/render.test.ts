@@ -69,9 +69,17 @@ function text(svg: string): string {
   return svg.replace(/<[^>]+>/g, "");
 }
 
+const DISCLAIMER =
+  "Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not medical advice.";
+
 describe("renderPage", () => {
   it("contains the page number", () => {
     expect(text(render())).toContain("Page 1 of 1");
+  });
+
+  it("bakes the disclaimer into every page in both palettes", () => {
+    expect(text(render("mono"))).toContain(DISCLAIMER);
+    expect(text(render("color"))).toContain(DISCLAIMER);
   });
 
   it("is one svg document", () => {
