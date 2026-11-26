@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'" />
+    <title>Get started · Sleep Truth</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="site">
+      <a class="name" href="/">Sleep Truth</a>
+      <nav><a href="/start/">Get started</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+    </header>
+    <main>
+      <h1>Get started</h1>
+      <p class="lede">
+        From nothing to a printed sleep timeline in about 15 minutes. You type a few commands in a terminal; the steps
+        below give each one.
+      </p>
+
+      <div class="callout">
+        Sleep Truth is early. Today it runs on a Mac, from the command line. A simpler path for people who don't use a
+        terminal is the goal, not the present.
+      </div>
+
+      <h2>1. Install the tools</h2>
+      <p>
+        Install <a href="https://git-scm.com">git</a> and <a href="https://mise.jdx.dev">mise</a>. mise installs the exact
+        versions of Node and pnpm that Sleep Truth expects.
+      </p>
+
+      <h2>2. Get the code</h2>
+      <pre><code>git clone https://github.com/ahammond/sleep-truth.git
+cd sleep-truth
+mise trust
+mise exec -- pnpm install
+mise exec -- pnpm -C packages/web build</code></pre>
+      <p>The rest of the commands run from this <code>sleep-truth</code> directory.</p>
+
+      <h2>3. Connect your device</h2>
+      <p>
+        Follow the setup page for your device. It ends with a small settings file at
+        <code>~/.config/sleep-truth/config.json</code>.
+      </p>
+      <ul>
+        <li><a href="/devices/oura/">Oura Ring</a></li>
+      </ul>
+
+      <h2>4. Sign in</h2>
+      <pre><code>mise exec -- pnpm -C packages/cli start -- login</code></pre>
+      <p>
+        Your browser opens your device maker's sign-in page. Approve access, and the terminal says
+        <code>Login complete.</code>
+      </p>
+
+      <h2>5. Download your data</h2>
+      <pre><code>mise exec -- pnpm -C packages/cli start -- sync</code></pre>
+      <p>
+        The first run downloads up to a year of sleep records to your computer. Later runs fetch only the last few days.
+        To download less the first time, add a start date: <code>sync --since 2026-09-01</code>.
+      </p>
+
+      <h2>6. Export the nights you want</h2>
+      <pre><code>mise exec -- pnpm -C packages/cli start -- export --from 2026-09-01 --to 2026-11-26 -o ~/sleep.nights.json</code></pre>
+      <p>This writes one file with the nights in that range. It is yours: keep it, share it, or delete it.</p>
+
+      <h2>7. View and print</h2>
+      <ol>
+        <li>Open <code>packages/web/dist/index.html</code> in your browser.</li>
+        <li>Choose the file, or drop it on the page. Nothing is uploaded; the page works offline.</li>
+        <li>Pick <em>Printable</em> for black and white, or <em>Colour</em>.</li>
+        <li>Press Print. Choose US Letter, landscape. Save as PDF if you want to send it.</li>
+      </ol>
+      <p>The newest week comes first. Each row is one night, from 8 PM to noon, on your local clock.</p>
+
+      <h2>Keep it up to date</h2>
+      <p>Before each doctor's visit, run <code>sync</code> and <code>export</code> again, then print.</p>
+
+      <h2>Delete everything</h2>
+      <pre><code>mise exec -- pnpm -C packages/cli start -- forget</code></pre>
+      <p>
+        This cancels Sleep Truth's access and deletes the downloaded data from your computer. Delete any exported files
+        yourself.
+      </p>
+
+      <h2>Problems</h2>
+      <p>
+        If the browser can't return to the terminal after you sign in, run <code>login --paste</code> instead and paste
+        the address you land on. For anything else, open an issue on
+        <a href="https://github.com/ahammond/sleep-truth/issues">GitHub</a>.
+      </p>
+    </main>
+    <footer class="site">
+      <p>
+        Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not
+        medical advice.
+      </p>
+    </footer>
+  </body>
+</html>

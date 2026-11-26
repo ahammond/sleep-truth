@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'" />
+    <title>Add a device · Sleep Truth</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="site">
+      <a class="name" href="/">Sleep Truth</a>
+      <nav><a href="/start/">Get started</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+    </header>
+    <main>
+      <p class="meta"><a href="/#supported-devices">Supported devices</a></p>
+      <h1>Add the next device</h1>
+      <p class="lede">
+        Sleep Truth draws from one device-neutral file. A new device needs two things: a way to download its data to the
+        user's computer, and a converter into that file. The printout, markers, and print layout come for free.
+      </p>
+
+      <h2>1. Open an issue first</h2>
+      <p>
+        Open an issue on <a href="https://github.com/ahammond/sleep-truth/issues">GitHub</a> before writing code. Say:
+      </p>
+      <ul>
+        <li>which device, and the API or export it offers;</li>
+        <li>how a user signs in (OAuth, an API key, a file export);</li>
+        <li>whether it gives sleep stages per time step, and how long each step is;</li>
+        <li>whether its timestamps carry the local time zone offset.</li>
+      </ul>
+      <p>
+        Today the command-line tool is built around one device. Your pull request will need a way to choose the device,
+        so agree on the shape in the issue.
+      </p>
+
+      <h2>2. Write the converter</h2>
+      <p>
+        Add a pure function in <code>packages/core</code> that turns the device's records into periods of the nights file.
+        <code>packages/core/src/oura.ts</code> is the worked example. Each period has:
+      </p>
+      <ul>
+        <li><code>id</code>: <code>&lt;device&gt;:&lt;the device's own id&gt;</code>;</li>
+        <li><code>start</code> and <code>end</code>: local time with its UTC offset;</li>
+        <li><code>epoch_seconds</code> and <code>stages</code>: one letter per step, <code>W</code> awake, <code>R</code> REM, <code>L</code> light, <code>D</code> deep;</li>
+        <li><code>movement</code>: one digit per step, <code>0</code> none to <code>3</code> active, all <code>0</code> if the device has none;</li>
+        <li><code>totals</code>: asleep and in-bed seconds, as the device reports them;</li>
+        <li><code>source_type</code>: the device's own label for the period, kept as is.</li>
+      </ul>
+      <p>
+        The full contract is §5.2 of <code>docs/design/week-grid-mvp.md</code>, and <code>parseNightsFile</code> enforces
+        it.
+      </p>
+
+      <h2>3. Download to the user's computer</h2>
+      <p>Add the sign-in and download code in <code>packages/cli</code>. It must keep these promises:</p>
+      <ul>
+        <li>Data goes from the device maker straight to the user's computer. No server, no relay, no middle man.</li>
+        <li>Downloads are cached under <code>~/.local/share/sleep-truth/</code>, so <code>forget</code> deletes them.</li>
+        <li><code>forget</code> also cancels the device's access where its API allows it.</li>
+        <li>Secrets stay in <code>~/.config/sleep-truth/</code>, readable only by the user.</li>
+      </ul>
+
+      <h2>4. Test with made-up data</h2>
+      <p>
+        Never commit real health data, not even your own. Build synthetic records shaped like the device's real responses,
+        and test the converter and the client against them. The client tests use a stub instead of the network.
+      </p>
+      <pre><code>mise exec -- pnpm test
+mise exec -- pnpm typecheck</code></pre>
+
+      <h2>5. Document it</h2>
+      <ul>
+        <li>Add a setup page at <code>site/devices/&lt;device&gt;/index.html</code>, like the Oura Ring page.</li>
+        <li>Add the device to the Supported devices list on <code>site/index.html</code> and on the Get started page.</li>
+        <li>The printout's subtitle names the device. Make it read the device from the file.</li>
+      </ul>
+
+      <h2>6. Open the pull request</h2>
+      <p>
+        Link the issue. Include a PDF printed from synthetic data, and say which real nights you compared against the
+        device's own app.
+      </p>
+    </main>
+    <footer class="site">
+      <p>
+        Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not
+        medical advice.
+      </p>
+    </footer>
+  </body>
+</html>
