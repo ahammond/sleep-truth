@@ -1,0 +1,26 @@
+#!/bin/sh
+# The sleep-truth command. Runs the CLI in this checkout with the Node
+# version pinned in mise.toml, from whatever directory you are in.
+# Install: ln -s "$PWD/bin/sleep-truth" ~/.local/bin/sleep-truth
+set -eu
+
+# Follow symlinks so a link in ~/.local/bin still finds the checkout.
+self=$0
+while [ -L "$self" ]; do
+  target=$(readlink "$self")
+  case $target in
+    /*) self=$target ;;
+    *) self=$(dirname "$self")/$target ;;
+  esac
+done
+root=$(cd "$(dirname "$self")/.." && pwd -P)
+
+if ! command -v mise >/dev/null 2>&1; then
+  echo "sleep-truth needs mise. Install it from https://mise.jdx.dev" >&2
+  exit 1
+fi
+node=$(mise -C "$root" which node) || {
+  echo "mise has no Node for $root. Run: mise -C \"$root\" trust && mise -C \"$root\" install" >&2
+  exit 1
+}
+exec "$node" "$root/packages/cli/src/main.ts" "$@"

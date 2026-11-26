@@ -131,17 +131,17 @@ Needs [mise](https://mise.jdx.dev). It installs the pinned Node and pnpm.
 2. Write `~/.config/sleep-truth/config.json`:
    `{ "client_id": "…", "client_secret": "…" }`
 3. Install and build: `mise exec -- pnpm install`, then
-   `mise exec -- pnpm -C packages/web build`.
-4. Log in and fetch: `mise exec -- pnpm -C packages/cli start -- login`, then
-   `mise exec -- pnpm -C packages/cli start -- sync`. The first sync fetches a
+   `mise exec -- pnpm -C packages/web build`. Put the command on your PATH:
+   `ln -sf "$PWD/bin/sleep-truth" ~/.local/bin/sleep-truth`.
+4. Log in and fetch: `sleep-truth login`, then `sleep-truth sync`. The first sync fetches a
    year; add `--since YYYY-MM-DD` to fetch less. If the browser cannot
    reach the callback, use `login --paste` and paste the redirected URL.
-5. Export: `mise exec -- pnpm -C packages/cli start -- export --from 2026-11-01 --to 2026-11-28 -o ~/sleep.nights.json`.
+5. Export: `sleep-truth export --from 2026-11-01 --to 2026-11-28 -o ~/sleep.nights.json`.
    Keep the file outside the repo.
 6. Open `packages/web/dist/index.html` in a browser and load the file. Pick
    *Printable* or *Colour*, then Print. Choose US Letter, landscape.
 7. Remove local Oura data and Sleep Truth access with
-   `mise exec -- pnpm -C packages/cli start -- forget`. Delete exported nights
+   `sleep-truth forget`. Delete exported nights
    files yourself.
 
 The page reads the file in the browser and sends nothing anywhere. Raw Oura

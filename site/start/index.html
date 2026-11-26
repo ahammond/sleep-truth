@@ -35,8 +35,15 @@
 cd sleep-truth
 mise trust
 mise exec -- pnpm install
-mise exec -- pnpm -C packages/web build</code></pre>
-      <p>The rest of the commands run from this <code>sleep-truth</code> directory.</p>
+mise exec -- pnpm -C packages/web build
+mkdir -p ~/.local/bin
+ln -sf "$PWD/bin/sleep-truth" ~/.local/bin/sleep-truth
+sleep-truth --help</code></pre>
+      <p>
+        The last command prints the <code>sleep-truth</code> commands. If it says <code>command not found</code>, run
+        <code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code>, open a new terminal window, and try
+        <code>sleep-truth --help</code> again. From here on, <code>sleep-truth</code> works in any directory.
+      </p>
 
       <h2>3. Connect your device</h2>
       <p>
@@ -48,26 +55,26 @@ mise exec -- pnpm -C packages/web build</code></pre>
       </ul>
 
       <h2>4. Sign in</h2>
-      <pre><code>mise exec -- pnpm -C packages/cli start -- login</code></pre>
+      <pre><code>sleep-truth login</code></pre>
       <p>
         Your browser opens your device maker's sign-in page. Approve access, and the terminal says
         <code>Login complete.</code>
       </p>
 
       <h2>5. Download your data</h2>
-      <pre><code>mise exec -- pnpm -C packages/cli start -- sync</code></pre>
+      <pre><code>sleep-truth sync</code></pre>
       <p>
         The first run downloads up to a year of sleep records to your computer. Later runs fetch only the last few days.
-        To download less the first time, add a start date: <code>sync --since 2026-09-01</code>.
+        To download less the first time, add a start date: <code>sleep-truth sync --since 2026-09-01</code>.
       </p>
 
       <h2>6. Export the nights you want</h2>
-      <pre><code>mise exec -- pnpm -C packages/cli start -- export --from 2026-09-01 --to 2026-11-26 -o ~/sleep.nights.json</code></pre>
+      <pre><code>sleep-truth export --from 2026-09-01 --to 2026-11-26 -o ~/sleep.nights.json</code></pre>
       <p>This writes one file with the nights in that range. It is yours: keep it, share it, or delete it.</p>
 
       <h2>7. View and print</h2>
       <ol>
-        <li>Open <code>packages/web/dist/index.html</code> in your browser.</li>
+        <li>Open <code>packages/web/dist/index.html</code>, inside the <code>sleep-truth</code> folder, in your browser.</li>
         <li>Choose the file, or drop it on the page. Nothing is uploaded; the page works offline.</li>
         <li>Pick <em>Printable</em> for black and white, or <em>Colour</em>.</li>
         <li>Press Print. Choose US Letter, landscape. Save as PDF if you want to send it.</li>
@@ -75,10 +82,10 @@ mise exec -- pnpm -C packages/web build</code></pre>
       <p>The newest night comes first and the dates run backwards from there. Each row is one night, from 8 PM to noon, on your local clock.</p>
 
       <h2>Keep it up to date</h2>
-      <p>Before each doctor's visit, run <code>sync</code> and <code>export</code> again, then print.</p>
+      <p>Before each doctor's visit, run <code>sleep-truth sync</code> and <code>sleep-truth export</code> again, then print.</p>
 
       <h2>Delete everything</h2>
-      <pre><code>mise exec -- pnpm -C packages/cli start -- forget</code></pre>
+      <pre><code>sleep-truth forget</code></pre>
       <p>
         This cancels Sleep Truth's access and deletes the downloaded data from your computer. Delete any exported files
         yourself.
@@ -86,7 +93,7 @@ mise exec -- pnpm -C packages/web build</code></pre>
 
       <h2>Problems</h2>
       <p>
-        If the browser can't return to the terminal after you sign in, run <code>login --paste</code> instead and paste
+        If the browser can't return to the terminal after you sign in, run <code>sleep-truth login --paste</code> instead and paste
         the address you land on. For anything else, open an issue on
         <a href="https://github.com/ahammond/sleep-truth/issues">GitHub</a>.
       </p>
