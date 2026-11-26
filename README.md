@@ -158,7 +158,8 @@ for the full reasoning.
 ## Contributing
 
 The project is maintained by one person in their spare time and optimizes for low
-maintenance burden and boring, stable technology. Contributions are welcome once
-code lands — especially from anyone with clinical sleep-medicine background who can
+maintenance burden and boring, stable technology. Contributions are welcome,
+especially from anyone with clinical sleep-medicine background who can
 review the reference thresholds. Contributions that move the project toward
 multi-tenancy or hosted operation will be declined per the non-goals above.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to get set up.
