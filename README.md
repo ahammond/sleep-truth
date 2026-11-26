@@ -149,7 +149,7 @@ data is cached in `~/.local/share/sleep-truth/`.
 
 ## License
 
-Apache 2.0 (planned). Permissive licensing is deliberate: the project's stated goal
+[Apache 2.0](LICENSE). Permissive licensing is deliberate: the project's stated goal
 is that a device manufacturer could adopt this work with nothing standing in the
 way, and Apache 2.0's explicit patent grant matters in a domain where sleep-metric
 algorithms carry existing patents. See [§7 of the MRD](vision-mrd.md#7-license-recommendation)
