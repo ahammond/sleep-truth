@@ -12,9 +12,6 @@ export interface RenderContext {
   palette?: Palette;
 }
 
-export const DISCLAIMER =
-  "Not a diagnostic tool. Shows data recorded by a consumer wearable; stages are Oura's estimates, not polysomnography.";
-
 // Layout constants, ported from docs/design/week-grid-mockup.html style A.
 const W = 1100;
 const H = 850;
@@ -214,7 +211,6 @@ export function renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: R
     });
     y = bottom + 22;
   }
-  s += `<text x="${GX}" y="${H - 22}" font-size="8.5" fill="#444444">${escapeXml(DISCLAIMER)}</text>`;
   s += `<text x="${W - GX}" y="${H - 22}" font-size="8.5" fill="#444444" text-anchor="end">Page ${ctx.pageNo} of ${ctx.pageCount} · sleep-truth</text>`;
   s += "</svg>";
   return s;

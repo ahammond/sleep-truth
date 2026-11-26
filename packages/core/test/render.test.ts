@@ -15,9 +15,6 @@ import {
 import { period } from "./helpers/period.ts";
 import { synthNight } from "./helpers/synth.ts";
 
-const DISCLAIMER =
-  "Not a diagnostic tool. Shows data recorded by a consumer wearable; stages are Oura's estimates, not polysomnography.";
-
 function fixture(): { page: Page; markers: Map<ISODate, RowMarkers>; home: number | null } {
   const nights: Array<[string, number, string, number]> = [
     // [evening, bed hour (24+ = after midnight), offset, hours]
@@ -73,10 +70,8 @@ function text(svg: string): string {
 }
 
 describe("renderPage", () => {
-  it("contains the disclaimer and page number", () => {
-    const svg = render();
-    expect(svg).toContain(DISCLAIMER);
-    expect(text(svg)).toContain("Page 1 of 1");
+  it("contains the page number", () => {
+    expect(text(render())).toContain("Page 1 of 1");
   });
 
   it("is one svg document", () => {

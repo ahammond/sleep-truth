@@ -74,6 +74,9 @@ describe("renderReport", () => {
   });
 });
 
+const DISCLAIMER =
+  "Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not medical advice.";
+
 describe("print hides controls", () => {
   const html = readFileSync(fileURLToPath(new URL("../index.html", import.meta.url)), "utf8");
   const main = readFileSync(fileURLToPath(new URL("../src/main.ts", import.meta.url)), "utf8");
@@ -91,6 +94,17 @@ describe("print hides controls", () => {
 
   it("the error banner is no-print", () => {
     expect(html).toMatch(/<div id="error" class="[^"]*\bno-print\b/);
+  });
+
+  it("shows the disclaimer outside no-print content before a file is loaded", () => {
+    const footer = html.match(/<footer[^>]*>([^]*?)<\/footer>/);
+    expect(footer?.[1]).toContain(DISCLAIMER);
+    expect(footer?.[0]).not.toMatch(/\bno-print\b/);
+  });
+
+  it("repeats the disclaimer on printed pages without hiding it", () => {
+    expect(css).not.toMatch(/\.disclaimer\s*{[^}]*display:\s*none/);
+    expect(css).toMatch(/@media print\s*{[^]*\.disclaimer\s*{[^}]*position:\s*fixed/);
   });
 
   it("main.ts creates no interactive elements at runtime", () => {
