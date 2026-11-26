@@ -7,11 +7,11 @@ sleep wearables (starting with Oura) and turns it into the metrics, trends, and
 doctor-ready reports a clinician actually needs — without asking you to trust a
 third party with your health data.
 
-> **Status: design stage.** This repository currently contains the project's
-> [vision and market requirements document](vision-mrd.md). No code has shipped yet.
-> The README below describes what the project is building and the principles it is
-> committed to, so you can judge whether it's worth watching — or contributing to —
-> before a line of code exists.
+> **Status: early.** The first piece works: a printable night-by-night sleep
+> timeline from Oura data, on a Mac. See [Try it](#try-it-the-week-grid-printout).
+> The rest of this README describes where the project is going and the principles
+> it is committed to. The [vision and market requirements document](vision-mrd.md)
+> has the full reasoning.
 
 ---
 
@@ -110,7 +110,7 @@ firmly.
 
 ## Roadmap to v1
 
-- [ ] Verify Oura API v2 terms permit this use (before finalizing architecture)
+- [x] Verify Oura API v2 terms permit this use (before finalizing architecture)
 - [ ] Source and cite every clinical threshold from sleep-medicine literature
 - [ ] Ingestion pipeline: Oura API v2 → user-owned storage, serverless/cron-friendly
 - [ ] Metric computation layer
@@ -123,26 +123,8 @@ tracking — lives in the [vision & MRD](vision-mrd.md).
 
 ## Try it: the week-grid printout
 
-Needs [mise](https://mise.jdx.dev). It installs the pinned Node and pnpm.
-
-1. Register an Oura API application at
-   <https://developer.ouraring.com/applications>. Set the redirect URI to
-   `http://localhost:8765/callback`, and tick the `daily` scope.
-2. Write `~/.config/sleep-truth/config.json`:
-   `{ "client_id": "…", "client_secret": "…" }`
-3. Install and build: `mise exec -- pnpm install`, then
-   `mise exec -- pnpm -C packages/web build`. Put the command on your PATH:
-   `ln -sf "$PWD/bin/sleep-truth" ~/.local/bin/sleep-truth`.
-4. Log in and fetch: `sleep-truth login`, then `sleep-truth sync`. The first sync fetches a
-   year; add `--since YYYY-MM-DD` to fetch less. If the browser cannot
-   reach the callback, use `login --paste` and paste the redirected URL.
-5. Export: `sleep-truth export --from 2026-11-01 --to 2026-11-28 -o ~/sleep.nights.json`.
-   Keep the file outside the repo.
-6. Open `packages/web/dist/index.html` in a browser and load the file. Pick
-   *Printable* or *Colour*, then Print. Choose US Letter, landscape.
-7. Remove local Oura data and Sleep Truth access with
-   `sleep-truth forget`. Delete exported nights
-   files yourself.
+Follow [Get started](https://sleep-truth.agh1973.com/start/). It takes about
+15 minutes on a Mac. To work on the code, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The page reads the file in the browser and sends nothing anywhere. Raw Oura
 data is cached in `~/.local/share/sleep-truth/`.

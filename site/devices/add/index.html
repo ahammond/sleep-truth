@@ -43,7 +43,8 @@
       <ul>
         <li><code>id</code>: <code>&lt;device&gt;:&lt;the device's own id&gt;</code>;</li>
         <li><code>start</code> and <code>end</code>: local time with its UTC offset;</li>
-        <li><code>epoch_seconds</code> and <code>stages</code>: one letter per step, <code>W</code> awake, <code>R</code> REM, <code>L</code> light, <code>D</code> deep;</li>
+        <li><code>epoch_seconds</code> and <code>stages</code>: one letter per 30-second step, <code>W</code> awake, <code>R</code> REM, <code>L</code> light, <code>D</code> deep;</li>
+        <li><code>native_epoch_seconds</code>: only when the device's steps are longer than 30 seconds and you repeated each one to fill the 30-second steps, so the printout can say so;</li>
         <li><code>movement</code>: one digit per step, <code>0</code> none to <code>3</code> active, all <code>0</code> if the device has none;</li>
         <li><code>totals</code>: asleep and in-bed seconds, as the device reports them;</li>
         <li><code>source_type</code>: the device's own label for the period, kept as is.</li>
@@ -74,7 +75,7 @@ mise exec -- pnpm typecheck</code></pre>
       <ul>
         <li>Add a setup page at <code>site/devices/&lt;device&gt;/index.html</code>, like the Oura Ring page.</li>
         <li>Add the device to the Supported devices list on <code>site/index.html</code> and on the Get started page.</li>
-        <li>The printout's subtitle names the device. Make it read the device from the file.</li>
+        <li>The printout's subtitle names the device from the file. Add its printed name to <code>DEVICE_NAMES</code> in <code>packages/core/src/render.ts</code>.</li>
       </ul>
 
       <h2>6. Open the pull request</h2>

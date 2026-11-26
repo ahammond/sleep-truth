@@ -14,6 +14,12 @@ Commit messages use conventional commits (`feat:`, `fix:`, `docs:`,
 - `README.md`: what the project is and its principles.
 - `vision-mrd.md`: vision, goals, non-goals, risks.
 - `docs/design/`: approved designs. Read the relevant one before building.
+- `docs/plans/`: implementation plans.
+- `packages/core`: the nights file, the Oura converter, layout and render.
+- `packages/cli`: sign-in, sync, export, forget. `bin/sleep-truth` runs it.
+- `packages/web`: the single-file printable page.
+- `site/`: the public site, deployed on push to `main`.
+- `CONTRIBUTING.md`: setup and checks for contributors.
 
 ## Hard rules
 

@@ -40,21 +40,21 @@
       </p>
 
       <h2>2. Save the keys</h2>
-      <p>Oura shows a Client ID and a Client Secret. Put them in <code>~/.config/sleep-truth/config.json</code>:</p>
-      <pre><code>{
-  "client_id": "your client id",
-  "client_secret": "your client secret"
-}</code></pre>
-      <p>Keep the file private. On a Mac:</p>
-      <pre><code>chmod 600 ~/.config/sleep-truth/config.json</code></pre>
+      <p>Oura shows a Client ID and a Client Secret. Run this, then paste each one when it asks:</p>
+      <pre><code>sleep-truth setup</code></pre>
+      <p>
+        It saves them in <code>~/.config/sleep-truth/config.json</code>, readable only by your user account. Run it again
+        to change them.
+      </p>
 
       <h2>3. Carry on</h2>
       <p>Go back to <a href="/start/">Get started</a>, step 4, and sign in.</p>
 
       <h2>What Sleep Truth reads</h2>
       <p>
-        Sleep periods: start and end times with your time zone, 30-second sleep stages, movement, and Oura's asleep and
-        in-bed totals. Naps are included.
+        Oura's sleep records. Sleep Truth saves each record as Oura sends it and prints these parts: start and end times
+        with your time zone, sleep stages, movement, and Oura's asleep and in-bed totals. Stages are in 30-second steps,
+        or 5-minute steps on nights where Oura has nothing finer. Naps are included.
       </p>
     </main>
     <footer class="site">

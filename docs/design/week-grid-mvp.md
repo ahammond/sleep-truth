@@ -130,6 +130,7 @@ into it later. Shape (field names are the builder's to refine):
       "end":   "2026-11-19T06:30:00-07:00",
       "source_type": "long_sleep",             // Oura type, kept verbatim
       "epoch_seconds": 30,
+      // "native_epoch_seconds": 300,         // optional: stages came from 5-minute data
       "stages":   "WWLLDDLR...",               // W awake, R REM, L light, D deep
       "movement": "0012300...",                // 0 none .. 3 active
       "totals": { "asleep_s": 25920, "in_bed_s": 31740 }
@@ -147,7 +148,13 @@ into it later. Shape (field names are the builder's to refine):
   change without re-exporting.
 - Stage and movement letters are our own vocabulary, decoupled from
   Oura's digits.
-- Totals come from Oura's fields, not recomputed, in this iteration.
+- Totals come from Oura's fields, not recomputed, in this iteration. The
+  one exception: when Oura's `total_sleep_duration` is null, asleep is the
+  count of non-awake epochs times 30 seconds.
+- When Oura has no 30-second phases, the converter repeats each 5-minute
+  phase ten times and sets the optional `native_epoch_seconds: 300` on the
+  period. The printout marks those rows `5-min stages` and counts them in
+  the source line.
 
 ### 5.3 CLI
 
@@ -233,14 +240,15 @@ data. Andrew picked drawing style A.
   A name too long for the gutter wraps to a second line when the row has
   no other note, and ends in … where it still does not fit.
 - **Row offset:** a row's UTC offset is the start offset of its longest
-  period. It positions the row's window and drives the markers below.
+  period. It drives the markers below. Each period is still drawn on its
+  own local clock.
 - **Time zone changes:** when a row's UTC offset differs from the
   previous row's, draw ✈ with `UTC-7 → UTC-5` in the gutter and a dashed
   rule below the row, between it and the earlier night. Rows whose offset
   differs from the most common offset in the range ("home") say
   `local UTC-5` in the gutter. The exception is a daylight-saving change:
-  a run of rows one hour off home that reaches either end of the range
-  gets the ✈ but no `local` label.
+  a run of rows one hour off home that reaches the first or last row with
+  data gets the ✈ but no `local` label.
 - **Header:** title with the date range, a one-line source note, and a
   legend for stages, movement, markers and holiday hatching.
 - **Footer on every page:** the not-a-diagnostic-tool disclaimer and
@@ -269,8 +277,9 @@ data. Andrew picked drawing style A.
   CORS. The browser still cannot call Oura, so the CLI stays.
 - **R2, loopback redirect.** Oura accepts `http://localhost:8765/callback`
   as a redirect URI. `login` completed through the local callback on the
-  first try. `https://sleep-truth.agh1973.com/callback/` is also registered
-  for `login --paste`; the trailing slash matters, because the site
+  first try. `https://sleep-truth.agh1973.com/callback/` is also registered.
+  Setting `redirect_uri` to it in config.json makes `login` use paste mode
+  through that page; the trailing slash matters, because the site
   redirects `/callback` to `/callback/` and drops the query string.
 - **R3, Oura developer terms.** Read. The API Agreement (effective
   2026-06-08) needs a privacy policy, deletion on request, and retention no

@@ -26,7 +26,7 @@
 
       <h2>1. Install the tools</h2>
       <p>
-        Install <a href="https://git-scm.com">git</a> and <a href="https://mise.jdx.dev">mise</a>. mise installs the exact
+        Install <a href="https://git-scm.com">git</a> and <a href="https://mise.jdx.dev">mise</a>. mise installs the
         versions of Node and pnpm that Sleep Truth expects.
       </p>
 
@@ -47,8 +47,8 @@ sleep-truth --help</code></pre>
 
       <h2>3. Connect your device</h2>
       <p>
-        Follow the setup page for your device. It ends with a small settings file at
-        <code>~/.config/sleep-truth/config.json</code>.
+        Follow the setup page for your device. It ends with <code>sleep-truth setup</code>, which saves your device app's
+        keys on your computer.
       </p>
       <ul>
         <li><a href="/devices/oura/">Oura Ring</a></li>
@@ -64,7 +64,7 @@ sleep-truth --help</code></pre>
       <h2>5. Download your data</h2>
       <pre><code>sleep-truth sync</code></pre>
       <p>
-        The first run downloads up to a year of sleep records to your computer. Later runs fetch only the last few days.
+        The first run downloads up to a year of sleep records to your computer. Later runs start a few days before the newest night you have.
         To download less the first time, add a start date: <code>sleep-truth sync --since 2026-09-01</code>.
       </p>
 
@@ -84,11 +84,11 @@ sleep-truth --help</code></pre>
       <h2>Keep it up to date</h2>
       <p>Before each doctor's visit, run <code>sleep-truth sync</code> and <code>sleep-truth export</code> again, then print.</p>
 
-      <h2>Delete everything</h2>
+      <h2>Delete your data</h2>
       <pre><code>sleep-truth forget</code></pre>
       <p>
-        This cancels Sleep Truth's access and deletes the downloaded data from your computer. Delete any exported files
-        yourself.
+        This cancels Sleep Truth's access and deletes the downloaded data from your computer. It keeps the settings file
+        with your Oura app keys, which holds no health data. Delete any exported files yourself.
       </p>
 
       <h2>Problems</h2>

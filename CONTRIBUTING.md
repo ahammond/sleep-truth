@@ -14,7 +14,8 @@ boring changes land fastest.
 
 ## Set up
 
-Install [mise](https://mise.jdx.dev). It pins Node and pnpm.
+Install [mise](https://mise.jdx.dev). It installs the Node and pnpm versions
+in `mise.toml`.
 
 ```sh
 git clone https://github.com/ahammond/sleep-truth.git
@@ -30,9 +31,17 @@ mise exec -- pnpm test
 mise exec -- pnpm typecheck
 ```
 
-For a printout change, build the page with
-`mise exec -- pnpm -C packages/web build`, load a synthetic nights file,
-and print it. Attach the PDF to the pull request.
+For a printout change, build the page and a synthetic nights file:
+
+```sh
+mise exec -- pnpm -C packages/web build
+mise exec -- node scripts/sample-nights.ts > /tmp/sample.nights.json
+```
+
+Open `packages/web/dist/index.html`, load the file, and print it. Attach the
+PDF to the pull request.
+
+GitHub runs the tests and the typecheck on every pull request.
 
 ## Rules
 
