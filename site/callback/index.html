@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <title>Finish signing in · Sleep Truth</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/callback/callback.js" defer></script>
+  </head>
+  <body>
+    <header class="site">
+      <a class="name" href="/">Sleep Truth</a>
+    </header>
+    <main>
+      <h1>Finish signing in</h1>
+      <p>Copy this page's full address and paste it into the terminal where <code>sleep-truth login</code> is waiting.</p>
+      <div class="copy">
+        <input id="address" type="text" readonly aria-label="This page's address" />
+        <button id="copy" type="button">Copy</button>
+      </div>
+      <p id="status" class="meta" role="status"></p>
+      <p class="meta">
+        This page does not send the address anywhere. The sign-in code in it only works together with a secret that never
+        leaves your computer.
+      </p>
+    </main>
+    <footer class="site">
+      <p>
+        Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not
+        medical advice.
+      </p>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+# Deploys site/ to the S3 + CloudFront site provisioned by
+# github.com/ahammond/hugo-cdk (stack HugoCDK-prod/SleepTruth).
+#
+# Repository variables: AWS_ROLE_ARN, AWS_S3_BUCKET, AWS_CLOUDFRONT_ID, AWS_REGION (optional)
+
+name: Deploy site
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC
+  contents: read
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      # Only site/ is published; nothing else in the repo reaches the bucket.
+      - name: Sync to S3
+        run: |
+          aws s3 sync \
+            --delete \
+            --no-progress \
+            --sse AES256 \
+            --storage-class INTELLIGENT_TIERING \
+            site/ s3://${{ vars.AWS_S3_BUCKET }}/
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.AWS_CLOUDFRONT_ID }} \
+            --paths "/*"
