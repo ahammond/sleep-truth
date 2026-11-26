@@ -141,7 +141,7 @@ describe("source line", () => {
     file.periods[2] = { ...file.periods[2]!, native_epoch_seconds: 300 };
     const page = renderReport(JSON.stringify(file), BASE).pages[0]!;
     expect(page).toContain("Oura Ring · 30-second stages ·");
-    expect(page).toContain("1 night has only 5-minute stages");
+    expect(page).toContain("1 night here has only 5-min stages");
     expect(renderReport(nightsFile("2026-11-08", 7), BASE).pages[0]).not.toContain("5-minute");
   });
 });

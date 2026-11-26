@@ -12,8 +12,6 @@ export interface RenderContext {
   palette?: Palette;
   /** `source.device` from the nights file. */
   device?: string;
-  /** Nights in the report whose stages came from coarser data. */
-  coarseNights?: number;
 }
 
 /** Printed names for `source.device` values. Unknown devices print as given. */
@@ -180,6 +178,11 @@ function wrap(prefix: string, text: string, max: number): string[] {
   return kept;
 }
 
+/** `5-min stages`, `90-sec stages`. */
+function coarseLabel(seconds: number): string {
+  return seconds % 60 === 0 ? `${seconds / 60}-min stages` : `${seconds}-sec stages`;
+}
+
 function gutterNotes(m: RowMarkers | undefined): string[] {
   if (!m) return [];
   const offsetNote = m.tzChange
@@ -187,7 +190,7 @@ function gutterNotes(m: RowMarkers | undefined): string[] {
     : m.away !== undefined
       ? `local ${formatOffset(m.away)}`
       : undefined;
-  const coarseNote = m.coarseSeconds ? `${m.coarseSeconds / 60}-min stages` : undefined;
+  const coarseNote = m.coarseSeconds ? coarseLabel(m.coarseSeconds) : undefined;
   const fixed = [offsetNote, coarseNote].filter((s): s is string => s !== undefined);
   // The holiday keeps at least one line; with two other notes the gutter holds three.
   const notes = m.holidayName ? wrap("◆", m.holidayName, Math.max(1, GUTTER_LINES - fixed.length)) : [];
@@ -201,8 +204,11 @@ function drawRow(r: Row, m: RowMarkers | undefined, y0: number, fills: Record<St
   }
   s += `<text x="${GX}" y="${y0 + 12}" font-size="12" font-weight="600">${DAYS[r.weekday]}</text>`;
   s += `<text x="${GX + 30}" y="${y0 + 12}" font-size="12">${formatShortDate(r.evening)}</text>`;
-  gutterNotes(m).forEach((note, i) => {
-    s += `<text x="${GX}" y="${y0 + 26 + i * 10}" font-size="9">${escapeXml(note)}</text>`;
+  const notes = gutterNotes(m);
+  // Three notes only fit above the row rule when packed tighter.
+  const step = notes.length > 2 ? 8 : 10;
+  notes.forEach((note, i) => {
+    s += `<text x="${GX}" y="${y0 + (notes.length > 2 ? 23 : 26) + i * step}" font-size="9">${escapeXml(note)}</text>`;
   });
   if (m?.tzChange) {
     // Rows run newest first, so the earlier night, on the old offset, is the row below.
@@ -233,13 +239,15 @@ export function renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: R
   s += `<text x="${GX}" y="44" font-size="20" font-weight="600">${escapeXml(ctx.title)}</text>`;
   const home = ctx.home === null ? "" : ` (home ${formatOffset(ctx.home)})`;
   const device = ctx.device === undefined ? "" : `${DEVICE_NAMES[ctx.device] ?? ctx.device} · `;
-  const coarseCount = ctx.coarseNights ?? 0;
+  const coarse = page.weeks.flatMap((wk) => wk.rows).flatMap((r) => markers.get(r.evening)?.coarseSeconds ?? []);
   const sourceLine = `${device}30-second stages · local clock time${home} · rows start on the evening shown`;
   s += `<text x="${GX}" y="62" font-size="10.5" fill="#444444">${escapeXml(sourceLine)}</text>`;
-  if (coarseCount > 0) {
-    // Its own line: the source line already runs up to the legend.
-    const nights = coarseCount === 1 ? "1 night has" : `${coarseCount} nights have`;
-    s += `<text x="${GX}" y="76" font-size="10.5" fill="#444444">${nights} only 5-minute stages, marked “5-min stages”.</text>`;
+  if (coarse.length > 0) {
+    // Its own line: the source line already runs up to the legend. Counts only this page's rows.
+    const nights = coarse.length === 1 ? "1 night here has" : `${coarse.length} nights here have`;
+    const kinds = [...new Set(coarse)];
+    const what = kinds.length === 1 ? `only ${coarseLabel(kinds[0]!)}` : "coarser stages";
+    s += `<text x="${GX}" y="76" font-size="10.5" fill="#444444">${escapeXml(`${nights} ${what}, marked in the row.`)}</text>`;
   }
   s += drawLegend(fills);
 

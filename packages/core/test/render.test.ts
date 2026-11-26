@@ -203,8 +203,8 @@ describe("source line", () => {
     markers.set("2026-11-09", { hatch: [], coarseSeconds: 300 });
     const plain = text(renderPage(page, new Map(), { title: "T", pageNo: 1, pageCount: 1, home, device: "oura" }));
     expect(plain).toContain("Oura Ring · 30-second stages ·");
-    const coarse = text(renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home, device: "oura", coarseNights: 2 }));
-    expect(coarse).toContain("2 nights have only 5-minute stages");
+    const coarse = text(renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home, device: "oura" }));
+    expect(coarse).toContain("1 night here has only 5-min stages, marked in the row.");
     expect(coarse).toContain("5-min stages");
   });
 });
@@ -224,5 +224,24 @@ describe("gutter wrapping, long words", () => {
 describe("version skew", () => {
   it("says a newer file needs a newer page", () => {
     expect(() => parseNightsFile({ schema: "sleep-truth/nights", version: 2, source: {}, periods: [] })).toThrow(/newer Sleep Truth/);
+  });
+});
+
+describe("coarse notes per page", () => {
+  it("say nothing on a page without coarse rows, and print the real resolution", () => {
+    const { page, markers, home } = fixture();
+    expect(text(renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home }))).not.toContain("marked in the row");
+    markers.set("2026-11-09", { hatch: [], coarseSeconds: 60 });
+    expect(text(renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home }))).toContain("only 1-min stages");
+  });
+
+  it("keeps three gutter notes above the row rule", () => {
+    const { page, markers, home } = fixture();
+    markers.set("2026-11-09", { holidayName: "Remembrance Day", hatch: [], tzChange: { from: -420, to: -300 }, coarseSeconds: 300 });
+    const svg = renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home });
+    const ys = [...svg.split(">Nov 9<")[1]!.split(/>(Sun|Mon|Tue|Wed|Thu|Fri|Sat)</)[0]!.matchAll(/y="([\d.]+)" font-size="9">/g)].map((m) => Number(m[1]));
+    const rowTop = Number(svg.split(">Nov 9<")[0]!.match(/y="([\d.]+)" font-size="12"$/)![1]) - 12;
+    expect(ys).toHaveLength(3);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(rowTop + 44);
   });
 });

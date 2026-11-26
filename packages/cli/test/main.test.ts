@@ -43,3 +43,13 @@ describe("CLI entrypoint", () => {
     expect((await stat(output)).mode & 0o777).toBe(0o600);
   });
 });
+
+describe("an empty HOME in the real environment", () => {
+  it("still resolves the settings file to an absolute path", async () => {
+    const env: NodeJS.ProcessEnv = { ...process.env, HOME: "" };
+    delete env.XDG_CONFIG_HOME;
+    delete env.XDG_DATA_HOME;
+    const out = await execute("node", ["--input-type=module", "-e", "import { paths } from './src/paths.ts'; console.log(JSON.stringify(paths()))"], { cwd, env });
+    for (const value of Object.values(JSON.parse(out.stdout) as Record<string, string>)) expect(value.startsWith("/")).toBe(true);
+  });
+});

@@ -153,8 +153,8 @@ into it later. Shape (field names are the builder's to refine):
   count of non-awake epochs times 30 seconds.
 - When Oura has no 30-second phases, the converter repeats each 5-minute
   phase ten times and sets the optional `native_epoch_seconds: 300` on the
-  period. The printout marks those rows `5-min stages` and counts them in
-  the source line.
+  period. The printout marks those rows `5-min stages`, and a line under
+  the source line counts them on each page.
 
 ### 5.3 CLI
 

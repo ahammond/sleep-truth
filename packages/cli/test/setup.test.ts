@@ -42,3 +42,15 @@ describe("setup", () => {
     await expect(answer(join(dir, "config.json"), ["", "x"])).rejects.toThrow(/Client ID/);
   });
 });
+
+describe("setup hides the secret", () => {
+  it("turns echo off for the secret and back on afterwards", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "sleep-truth-setup-"));
+    const input = new PassThrough();
+    const calls: boolean[] = [];
+    const pending = setup(join(dir, "config.json"), input, new PassThrough(), (on) => calls.push(on));
+    input.write("id\nsecret\n");
+    await pending;
+    expect(calls).toEqual([false, true]);
+  });
+});

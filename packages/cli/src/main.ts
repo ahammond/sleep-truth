@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { chmod, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { authorizeUrl, exchangeCode, loopbackCallback, readTokens, usesPasteMode, writeTokens } from "./auth.ts";
 import { readConfig } from "./config.ts";
 import { readDocs, writeDocs } from "./cache.ts";
@@ -36,6 +36,8 @@ function challenge(value: string): string {
 
 function openUrl(url: string): void {
   const child = spawn("open", [url], { detached: true, stdio: "ignore" });
+  // No `open` (not a Mac): the address is already printed, so carry on without a browser.
+  child.on("error", () => {});
   child.unref();
 }
 
@@ -85,7 +87,10 @@ async function run(): Promise<void> {
   if (!command || command === "--help" || command === "-h") { console.log(usage); return; }
   if (command === "setup") {
     if (rest.length > 0) throw new Error("setup does not take arguments");
-    await setup(paths().config, process.stdin, process.stdout);
+    const echo = (on: boolean): void => {
+      if (process.stdin.isTTY) spawnSync("stty", [on ? "echo" : "-echo"], { stdio: ["inherit", "ignore", "ignore"] });
+    };
+    await setup(paths().config, process.stdin, process.stdout, echo);
     return;
   }
   if (command === "login") {

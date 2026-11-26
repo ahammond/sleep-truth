@@ -1,4 +1,4 @@
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { isAbsolute, join } from "node:path";
 
 export interface Paths {
@@ -14,7 +14,8 @@ function absolute(value: string | undefined): string | undefined {
 }
 
 export function paths(env: NodeJS.ProcessEnv = process.env): Paths {
-  const home = absolute(env.HOME) ?? homedir();
+  // os.homedir() returns $HOME unchecked on POSIX, so the account database is the last resort.
+  const home = absolute(env.HOME) ?? absolute(homedir()) ?? userInfo().homedir;
   const configHome = absolute(env.XDG_CONFIG_HOME) ?? join(home, ".config");
   const dataHome = absolute(env.XDG_DATA_HOME) ?? join(home, ".local", "share");
   const configDir = join(configHome, "sleep-truth");

@@ -12,7 +12,11 @@ async function existing(path: string): Promise<Record<string, unknown>> {
 }
 
 /** Asks for the device app's Client ID and Secret and writes the settings file, readable only by the user. */
-export async function setup(path: string, input: NodeJS.ReadableStream, output: NodeJS.WritableStream): Promise<void> {
+/**
+ * `echo(false)` hides typing while the secret is entered; main passes one that
+ * drives the terminal, tests pass none.
+ */
+export async function setup(path: string, input: NodeJS.ReadableStream, output: NodeJS.WritableStream, echo: (on: boolean) => void = () => {}): Promise<void> {
   // An async line iterator, not rl.question: pasted input can arrive faster than the prompts.
   const rl = createInterface({ input, terminal: false });
   const lines = rl[Symbol.asyncIterator]();
@@ -26,7 +30,13 @@ export async function setup(path: string, input: NodeJS.ReadableStream, output: 
   try {
     clientId = await ask("Client ID: ");
     if (!clientId) throw new Error("The Client ID is empty. Copy it from your Oura app page and run setup again.");
-    clientSecret = await ask("Client Secret: ");
+    echo(false);
+    try {
+      clientSecret = await ask("Client Secret (hidden as you paste): ");
+    } finally {
+      echo(true);
+      output.write("\n");
+    }
     if (!clientSecret) throw new Error("The Client Secret is empty. Copy it from your Oura app page and run setup again.");
   } finally {
     rl.close();
