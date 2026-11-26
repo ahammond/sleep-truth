@@ -17,13 +17,13 @@ describe("cache and paths", () => {
 
   it("honours XDG directories", () => {
     expect(paths({ XDG_CONFIG_HOME: "/config", XDG_DATA_HOME: "/data" })).toEqual({
-      config: "/config/sleep-truth/config.json", tokens: "/config/sleep-truth/tokens.json", cacheDir: "/data/sleep-truth/oura/sleep",
+      config: "/config/sleep-truth/config.json", tokens: "/config/sleep-truth/tokens.json", dataDir: "/data/sleep-truth", cacheDir: "/data/sleep-truth/oura/sleep",
     });
   });
 
   it("defaults to home config and local share directories", () => {
     expect(paths({ HOME: "/home/test" })).toEqual({
-      config: "/home/test/.config/sleep-truth/config.json", tokens: "/home/test/.config/sleep-truth/tokens.json", cacheDir: "/home/test/.local/share/sleep-truth/oura/sleep",
+      config: "/home/test/.config/sleep-truth/config.json", tokens: "/home/test/.config/sleep-truth/tokens.json", dataDir: "/home/test/.local/share/sleep-truth", cacheDir: "/home/test/.local/share/sleep-truth/oura/sleep",
     });
   });
 });

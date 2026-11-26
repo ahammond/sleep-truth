@@ -139,6 +139,9 @@ Needs [mise](https://mise.jdx.dev). It installs the pinned Node and pnpm.
    Keep the file outside the repo.
 6. Open `packages/web/dist/index.html` in a browser and load the file. Pick
    *Printable* or *Colour*, then Print. Choose US Letter, landscape.
+7. Remove local Oura data and Sleep Truth access with
+   `mise exec -- pnpm -C packages/cli start -- forget`. Delete exported nights
+   files yourself.
 
 The page reads the file in the browser and sends nothing anywhere. Raw Oura
 data is cached in `~/.local/share/sleep-truth/`.

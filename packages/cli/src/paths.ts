@@ -4,6 +4,7 @@ import { join } from "node:path";
 export interface Paths {
   config: string;
   tokens: string;
+  dataDir: string;
   cacheDir: string;
 }
 
@@ -12,9 +13,11 @@ export function paths(env: NodeJS.ProcessEnv = process.env): Paths {
   const configHome = env.XDG_CONFIG_HOME ?? join(home, ".config");
   const dataHome = env.XDG_DATA_HOME ?? join(home, ".local", "share");
   const configDir = join(configHome, "sleep-truth");
+  const dataDir = join(dataHome, "sleep-truth");
   return {
     config: join(configDir, "config.json"),
     tokens: join(configDir, "tokens.json"),
-    cacheDir: join(dataHome, "sleep-truth", "oura", "sleep"),
+    dataDir,
+    cacheDir: join(dataDir, "oura", "sleep"),
   };
 }

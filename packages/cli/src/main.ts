@@ -3,9 +3,10 @@ import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { spawn } from "node:child_process";
-import { authorizeUrl, exchangeCode, readTokens, refresh, writeTokens, type Config, type Tokens } from "./auth.ts";
+import { authorizeUrl, exchangeCode, readTokens, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "./auth.ts";
 import { readDocs, writeDocs } from "./cache.ts";
 import { exportNights } from "./export.ts";
+import { forget } from "./forget.ts";
 import { OuraClient } from "./oura-client.ts";
 import { readPastedUrl } from "./paste.ts";
 import { paths } from "./paths.ts";
@@ -13,14 +14,17 @@ import { paths } from "./paths.ts";
 const usage = `Usage:
   sleep-truth login [--paste]
   sleep-truth sync [--since YYYY-MM-DD]
-  sleep-truth export --from YYYY-MM-DD --to YYYY-MM-DD -o FILE`;
+  sleep-truth export --from YYYY-MM-DD --to YYYY-MM-DD -o FILE
+  sleep-truth forget`;
 
 function configFrom(value: unknown): Config {
   if (typeof value !== "object" || value === null) throw new Error("Invalid config file");
   const record = value as Record<string, unknown>;
   if (typeof record.client_id !== "string" || typeof record.client_secret !== "string") throw new Error("Config requires client_id and client_secret");
   if (record.redirect_port !== undefined && (typeof record.redirect_port !== "number" || !Number.isInteger(record.redirect_port))) throw new Error("Config redirect_port must be an integer");
-  return { client_id: record.client_id, client_secret: record.client_secret, redirect_port: record.redirect_port ?? 8765 };
+  if (record.redirect_uri !== undefined && typeof record.redirect_uri !== "string") throw new Error("Config redirect_uri must be a string");
+  const redirect_uri = record.redirect_uri === undefined ? undefined : validateRedirectUri(record.redirect_uri);
+  return { client_id: record.client_id, client_secret: record.client_secret, redirect_port: record.redirect_port ?? 8765, redirect_uri };
 }
 
 async function readConfig(path: string): Promise<Config> {
@@ -64,7 +68,7 @@ async function login(paste: boolean): Promise<void> {
   const codeVerifier = verifier();
   const url = authorizeUrl(config, state, challenge(codeVerifier));
   console.log(url);
-  const callback = paste ? await readPastedUrl(process.stdin, process.stdout) : await redirectedUrlFromServer(config.redirect_port, state, () => openUrl(url));
+  const callback = usesPasteMode(config, paste) ? await readPastedUrl(process.stdin, process.stdout) : await redirectedUrlFromServer(config.redirect_port, state, () => openUrl(url));
   if (callback.searchParams.get("state") !== state) throw new Error("OAuth state did not match");
   const code = callback.searchParams.get("code");
   if (!code) throw new Error("OAuth callback did not include code");
@@ -111,6 +115,11 @@ async function run(): Promise<void> {
   if (command === "login") {
     const args = parseArgs({ args: rest, options: { paste: { type: "boolean", default: false } } });
     await login(args.values.paste);
+    return;
+  }
+  if (command === "forget") {
+    if (rest.length > 0) throw new Error("forget does not take arguments");
+    await forget(paths());
     return;
   }
   if (command === "sync") {

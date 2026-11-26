@@ -5,6 +5,7 @@ export interface Config {
   client_id: string;
   client_secret: string;
   redirect_port: number;
+  redirect_uri?: string;
 }
 
 export interface Tokens {
@@ -17,7 +18,26 @@ export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<
 type Now = () => number;
 
 function redirectUri(config: Config): string {
-  return `http://localhost:${config.redirect_port}/callback`;
+  return config.redirect_uri ?? `http://localhost:${config.redirect_port}/callback`;
+}
+
+export function validateRedirectUri(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("Config redirect_uri must be an absolute http or https URL");
+  }
+  if ((url.protocol !== "http:" && url.protocol !== "https:") || !url.host) {
+    throw new Error("Config redirect_uri must be an absolute http or https URL");
+  }
+  return value;
+}
+
+export function usesPasteMode(config: Config, requested: boolean): boolean {
+  if (requested || !config.redirect_uri) return requested;
+  const host = new URL(config.redirect_uri).hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
 }
 
 export function authorizeUrl(config: Config, state: string, challenge: string): string {

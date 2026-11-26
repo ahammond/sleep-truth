@@ -2,7 +2,7 @@ import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { authorizeUrl, exchangeCode, refresh, writeTokens, type Config, type Tokens } from "../src/auth.ts";
+import { authorizeUrl, exchangeCode, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "../src/auth.ts";
 
 const config: Config = { client_id: "client id", client_secret: "secret value", redirect_port: 8765 };
 
@@ -23,6 +23,28 @@ describe("auth", () => {
       state: "state value",
       code_challenge: "challenge+/=",
     });
+  });
+
+  it("uses a configured redirect URI for authorization and exchange", async () => {
+    const custom = { ...config, redirect_uri: "https://sleep-truth.agh1973.com/callback/" };
+    expect(new URL(authorizeUrl(custom, "state", "challenge")).searchParams.get("redirect_uri")).toBe(custom.redirect_uri);
+    let request: Request | undefined;
+    await exchangeCode(custom, "code", "verifier", async (input, init) => {
+      request = new Request(input, init);
+      return response({ access_token: "access", refresh_token: "refresh", expires_in: 60 });
+    });
+    expect(new URLSearchParams(await request?.text()).get("redirect_uri")).toBe(custom.redirect_uri);
+  });
+
+  it("uses paste mode for a non-loopback redirect URI", () => {
+    expect(usesPasteMode({ ...config, redirect_uri: "https://sleep-truth.agh1973.com/callback/" }, false)).toBe(true);
+    expect(usesPasteMode(config, false)).toBe(false);
+    expect(usesPasteMode(config, true)).toBe(true);
+  });
+
+  it("rejects a relative or non-http redirect URI", () => {
+    expect(() => validateRedirectUri("/callback")).toThrow(/absolute http/i);
+    expect(() => validateRedirectUri("ftp://localhost/callback")).toThrow(/absolute http/i);
   });
 
   it("exchanges an authorization code with a form post", async () => {
