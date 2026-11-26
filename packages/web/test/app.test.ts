@@ -34,6 +34,14 @@ describe("renderReport", () => {
     expect(three.pages[1]).toContain("Page 2 of 2");
   });
 
+  it("newest week comes first, then back in time", () => {
+    const r = renderReport(nightsFile("2026-11-08", 21), BASE);
+    const first = r.pages[0]!;
+    expect(first).toContain("Week of Nov 22");
+    expect(first.indexOf("Week of Nov 22")).toBeLessThan(first.indexOf("Week of Nov 15"));
+    expect(r.pages[1]).toContain("Week of Nov 8");
+  });
+
   it("bad file gives an error, no throw", () => {
     const r = renderReport("{}", BASE);
     expect(r.error).toMatch(/schema/);

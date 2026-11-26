@@ -282,7 +282,7 @@ data. Andrew picked drawing style A.
 - SPA for presentation plus CLI for sourcing (approach 3).
 - Four stages (Awake, REM, Light, Deep) with a movement strip below.
 - Local clock time; mark time zone changes.
-- Sunday to Saturday rows, stacked week by week.
+- Sunday to Saturday rows, stacked week by week, newest week first.
 - Markers for interesting days: public holidays only.
 - Drawing style A (gray blocks).
 - Direction: toward a tool a sleep doctor can share with other doctors
