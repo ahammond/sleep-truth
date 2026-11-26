@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { NightsFile } from "@sleep-truth/core";
+import { DISCLAIMER, type NightsFile } from "@sleep-truth/core";
 import { renderReport, type Settings } from "../src/app.ts";
 import { period } from "../../core/test/helpers/period.ts";
 
@@ -88,8 +88,7 @@ describe("renderReport", () => {
   });
 });
 
-const DISCLAIMER =
-  "Sleep Truth shows data recorded by a consumer wearable. It is not a medical device, not a diagnostic tool, and not medical advice.";
+// The on-screen footer must say exactly what every printed sheet says.
 
 describe("print hides controls", () => {
   const html = readFileSync(fileURLToPath(new URL("../index.html", import.meta.url)), "utf8");
@@ -133,5 +132,22 @@ describe("print hides controls", () => {
 
   it("print css hides .no-print", () => {
     expect(css).toMatch(/@media print\s*{[^]*\.no-print\s*{\s*display:\s*none\s*!important/);
+  });
+});
+
+describe("source line", () => {
+  it("names the file's device and counts nights from coarser data", () => {
+    const file = JSON.parse(nightsFile("2026-11-08", 7)) as NightsFile;
+    file.periods[2] = { ...file.periods[2]!, native_epoch_seconds: 300 };
+    const page = renderReport(JSON.stringify(file), BASE).pages[0]!;
+    expect(page).toContain("Oura Ring · 30-second stages (1 night only had 5-minute stages)");
+    expect(renderReport(nightsFile("2026-11-08", 7), BASE).pages[0]).not.toContain("5-minute");
+  });
+});
+
+describe("file errors", () => {
+  it("tells the reader a newer file needs a newer page", () => {
+    const file = { ...JSON.parse(nightsFile("2026-11-08", 1)), version: 2 };
+    expect(renderReport(JSON.stringify(file), BASE).error).toMatch(/newer Sleep Truth \(version 2\)/);
   });
 });

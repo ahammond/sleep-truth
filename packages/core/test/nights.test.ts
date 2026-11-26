@@ -73,3 +73,13 @@ describe("offsetMinutes", () => {
     expect(offsetMinutes("2026-11-18T22:41:00.000-07:00")).toBe(-420);
   });
 });
+
+describe("native_epoch_seconds", () => {
+  it("accepts a coarser source resolution", () => {
+    expect(parseNightsFile(withPeriod({ native_epoch_seconds: 300 })).periods[0]?.native_epoch_seconds).toBe(300);
+  });
+  it("rejects a resolution that is not a whole number of epochs", () => {
+    expect(() => parseNightsFile(withPeriod({ native_epoch_seconds: 45 }))).toThrow(NightsFileError);
+    expect(() => parseNightsFile(withPeriod({ native_epoch_seconds: 0 }))).toThrow(NightsFileError);
+  });
+});

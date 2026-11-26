@@ -16,6 +16,8 @@ export interface RowMarkers {
   tzChange?: { from: number; to: number };
   /** The row's offset when it differs from home. */
   away?: number;
+  /** Coarsest source resolution on the row, in seconds, when coarser than 30. */
+  coarseSeconds?: number;
 }
 
 const MIDNIGHT = 240;
@@ -88,6 +90,8 @@ export function markRows(rows: Row[], holidays: Map<ISODate, string>): RowMarker
   let last: number | null = null;
   const marks = rows.map((r) => {
     const m: RowMarkers = { hatch: [] };
+    const coarse = Math.max(30, ...r.placed.map((p) => p.period.native_epoch_seconds ?? 30));
+    if (coarse > 30) m.coarseSeconds = coarse;
     const today = holidays.get(r.evening);
     const tomorrow = holidays.get(addDays(r.evening, 1));
     if (today !== undefined) m.holidayName = today;

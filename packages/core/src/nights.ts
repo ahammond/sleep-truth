@@ -12,6 +12,8 @@ export interface Period {
   end: string;
   source_type: string;
   epoch_seconds: 30;
+  /** Set when the device recorded coarser stages that were repeated to fill 30-second epochs. */
+  native_epoch_seconds?: number;
   /** One letter per epoch, from `WRLD`. */
   stages: string;
   /** One digit per epoch, from `0123`; same length as `stages`. */
@@ -85,6 +87,10 @@ function parsePeriod(input: unknown, i: number): Period {
   const movement = str(input, "movement", path);
   if (!/^[0-3]*$/.test(movement)) fail(`${path}movement`, "expected only 0-3");
   if (movement.length !== stages.length) fail(`${path}movement`, "length differs from stages");
+  const native = input.native_epoch_seconds;
+  if (native !== undefined && !(typeof native === "number" && Number.isInteger(native) && native > 30 && native % 30 === 0)) {
+    fail(`${path}native_epoch_seconds`, "expected a multiple of 30 above 30");
+  }
   const totals = input.totals;
   if (!isObject(totals)) fail(`${path}totals`, "expected an object");
   const tpath = `${path}totals.`;
@@ -94,6 +100,7 @@ function parsePeriod(input: unknown, i: number): Period {
     end,
     source_type,
     epoch_seconds: 30,
+    ...(native === undefined ? {} : { native_epoch_seconds: native }),
     stages,
     movement,
     totals: { asleep_s: seconds(totals, "asleep_s", tpath), in_bed_s: seconds(totals, "in_bed_s", tpath) },
@@ -104,6 +111,9 @@ function parsePeriod(input: unknown, i: number): Period {
 export function parseNightsFile(input: unknown): NightsFile {
   if (!isObject(input)) fail("file", "expected a JSON object");
   if (input.schema !== "sleep-truth/nights") fail("schema", 'expected "sleep-truth/nights"');
+  if (typeof input.version === "number" && input.version > 1) {
+    fail("version", `this file is from a newer Sleep Truth (version ${input.version}). This page reads version 1. Use a newer copy of the page`);
+  }
   if (input.version !== 1) fail("version", "expected 1");
   const source = input.source;
   if (!isObject(source)) fail("source", "expected an object");

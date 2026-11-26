@@ -125,3 +125,11 @@ describe("clock changes are not travel", () => {
     expect(m.map((x) => x.away)).toEqual([undefined, undefined, undefined, -300, -300]);
   });
 });
+
+describe("coarse stages", () => {
+  it("marks a row whose night came from 5-minute phases", () => {
+    const rows = fakeRows([-420, -420]);
+    rows[1]!.placed[0]!.period = { ...rows[1]!.placed[0]!.period, native_epoch_seconds: 300 };
+    expect(markRows(rows, new Map()).map((m) => m.coarseSeconds)).toEqual([undefined, 300]);
+  });
+});

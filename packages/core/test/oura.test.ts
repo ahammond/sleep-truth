@@ -141,3 +141,22 @@ describe("normalizeOura with schema-legal nulls", () => {
     expect(() => parseNightsFile(JSON.parse(JSON.stringify(file)))).not.toThrow();
   });
 });
+
+describe("stage resolution", () => {
+  it("records that a night came from 5-minute phases", () => {
+    const doc = { ...ouraDoc({ start: START, stages: "2".repeat(20) }), sleep_phase_30_sec: null, sleep_phase_5_min: "42" };
+    expect(one(doc).period?.native_epoch_seconds).toBe(300);
+  });
+  it("leaves 30-second nights unmarked", () => {
+    expect(one(ouraDoc({ start: START, stages: "22" })).period?.native_epoch_seconds).toBeUndefined();
+  });
+});
+
+describe("timestamps without an offset", () => {
+  it("are skipped, not fatal for the whole file", () => {
+    const doc = { ...ouraDoc({ start: START, stages: "22" }), bedtime_start: "2026-11-18T22:00:00" };
+    const { file, skipped } = normalizeOura([doc, ouraDoc({ start: START, stages: "22" })], new Date(0));
+    expect(skipped).toBe(1);
+    expect(file.periods).toHaveLength(1);
+  });
+});

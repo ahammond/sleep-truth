@@ -47,7 +47,7 @@ export function renderReport(fileText: string, settings: Settings): Report {
   try {
     file = parseNightsFile(json);
   } catch (e) {
-    if (e instanceof NightsFileError) return fail(`Not a nights file: ${e.message}`);
+    if (e instanceof NightsFileError) return fail(`Cannot read this nights file: ${e.message}.`);
     throw e;
   }
   if (file.periods.length === 0) return fail("The file has no nights.");
@@ -62,11 +62,12 @@ export function renderReport(fileText: string, settings: Settings): Report {
   const marks = markRows(rows, holidayMap(settings.region, years));
   const markers = new Map<ISODate, RowMarkers>(rows.map((r, i) => [r.evening, marks[i]!]));
   const home = homeOffset(rows);
+  const coarseNights = marks.filter((m) => m.coarseSeconds !== undefined).length;
   const pages = paginate(newestFirst(groupWeeks(rows)));
   const title = `Sleep, night by night · ${formatRange(from, to)}`;
   return {
     pages: pages.map((page, i) =>
-      renderPage(page, markers, { title, pageNo: i + 1, pageCount: pages.length, home, palette: settings.palette }),
+      renderPage(page, markers, { title, pageNo: i + 1, pageCount: pages.length, home, palette: settings.palette, device: file.source.device, coarseNights }),
     ),
     range: { from, to },
   };

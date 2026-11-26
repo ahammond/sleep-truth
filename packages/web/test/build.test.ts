@@ -1,9 +1,9 @@
-import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 let outDir = "";
@@ -19,6 +19,8 @@ beforeAll(async () => {
   });
   html = readFileSync(join(outDir, "index.html"), "utf8");
 }, 120_000);
+
+afterAll(() => rmSync(outDir, { recursive: true, force: true }));
 
 describe("single-file build", () => {
   it("holds exactly index.html", () => {

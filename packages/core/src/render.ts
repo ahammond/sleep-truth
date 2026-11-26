@@ -10,7 +10,14 @@ export interface RenderContext {
   pageCount: number;
   home: number | null;
   palette?: Palette;
+  /** `source.device` from the nights file. */
+  device?: string;
+  /** Nights in the report whose stages came from coarser data. */
+  coarseNights?: number;
 }
+
+/** Printed names for `source.device` values. Unknown devices print as given. */
+const DEVICE_NAMES: Record<string, string> = { oura: "Oura Ring" };
 
 /** Baked into every rendered page, so no browser or setting can drop it from a printout. */
 export const DISCLAIMER =
@@ -166,10 +173,10 @@ function wrap(prefix: string, text: string, max: number): string[] {
     line = word;
   }
   if (line) lines.push(line);
-  if (lines.length <= max && lines.every((l) => l.length <= GUTTER_CHARS)) return lines;
-  const kept = lines.slice(0, max);
+  const shorten = (l: string): string => `${l.slice(0, GUTTER_CHARS - 1).trimEnd()}…`;
+  const kept = lines.slice(0, max).map((l) => (l.length > GUTTER_CHARS ? shorten(l) : l));
   const last = kept.length - 1;
-  kept[last] = `${kept[last]!.slice(0, GUTTER_CHARS - 1).trimEnd()}…`;
+  if (lines.length > max && !kept[last]!.endsWith("…")) kept[last] = shorten(kept[last]!);
   return kept;
 }
 
@@ -180,9 +187,11 @@ function gutterNotes(m: RowMarkers | undefined): string[] {
     : m.away !== undefined
       ? `local ${formatOffset(m.away)}`
       : undefined;
-  const notes = m.holidayName ? wrap("◆", m.holidayName, offsetNote ? GUTTER_LINES - 1 : GUTTER_LINES) : [];
-  if (offsetNote) notes.push(offsetNote);
-  return notes;
+  const coarseNote = m.coarseSeconds ? `${m.coarseSeconds / 60}-min stages` : undefined;
+  const fixed = [offsetNote, coarseNote].filter((s): s is string => s !== undefined);
+  // The holiday keeps at least one line; with two other notes the gutter holds three.
+  const notes = m.holidayName ? wrap("◆", m.holidayName, Math.max(1, GUTTER_LINES - fixed.length)) : [];
+  return [...notes, ...fixed];
 }
 
 function drawRow(r: Row, m: RowMarkers | undefined, y0: number, fills: Record<Stage, string>, last: boolean): string {
@@ -223,7 +232,11 @@ export function renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: R
   s += `<rect width="${W}" height="${H}" fill="#ffffff"/>`;
   s += `<text x="${GX}" y="44" font-size="20" font-weight="600">${escapeXml(ctx.title)}</text>`;
   const home = ctx.home === null ? "" : ` (home ${formatOffset(ctx.home)})`;
-  s += `<text x="${GX}" y="62" font-size="10.5" fill="#444444">Oura Ring · 30-second stages · local clock time${escapeXml(home)} · rows start on the evening shown</text>`;
+  const device = ctx.device === undefined ? "" : `${DEVICE_NAMES[ctx.device] ?? ctx.device} · `;
+  const coarseCount = ctx.coarseNights ?? 0;
+  const coarse = coarseCount > 0 ? ` (${coarseCount} night${coarseCount === 1 ? "" : "s"} only had 5-minute stages)` : "";
+  const sourceLine = `${device}30-second stages${coarse} · local clock time${home} · rows start on the evening shown`;
+  s += `<text x="${GX}" y="62" font-size="10.5" fill="#444444">${escapeXml(sourceLine)}</text>`;
   s += drawLegend(fills);
 
   let y = 96;

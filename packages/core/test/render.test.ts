@@ -8,6 +8,7 @@ import {
   homeOffset,
   markRows,
   paginate,
+  parseNightsFile,
   renderPage,
   type ISODate,
   type Page,
@@ -63,7 +64,7 @@ function pad(v: number): string {
 
 function render(palette?: "mono" | "color"): string {
   const { page, markers, home } = fixture();
-  return renderPage(page, markers, { title: "Sleep, night by night · Nov 8 – Nov 21, 2026", pageNo: 1, pageCount: 1, home, palette });
+  return renderPage(page, markers, { title: "Sleep, night by night · Nov 8 – Nov 21, 2026", pageNo: 1, pageCount: 1, home, palette, device: "oura" });
 }
 
 function text(svg: string): string {
@@ -193,5 +194,35 @@ describe("gutter wrapping edge", () => {
     const row = svg.split(">Nov 9<")[1]!.split(/>(Sun|Mon|Tue|Wed|Thu|Fri|Sat)</)[0]!;
     expect(row).not.toMatch(/>◆</);
     expect(row).toMatch(/>◆ x+…</);
+  });
+});
+
+describe("source line", () => {
+  it("names the device from the file and says when nights were coarser", () => {
+    const { page, markers, home } = fixture();
+    markers.set("2026-11-09", { hatch: [], coarseSeconds: 300 });
+    const plain = text(renderPage(page, new Map(), { title: "T", pageNo: 1, pageCount: 1, home, device: "oura" }));
+    expect(plain).toContain("Oura Ring · 30-second stages ·");
+    const coarse = text(renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home, device: "oura", coarseNights: 2 }));
+    expect(coarse).toContain("30-second stages (2 nights only had 5-minute stages)");
+    expect(coarse).toContain("5-min stages");
+  });
+});
+
+describe("gutter wrapping, long words", () => {
+  it("shortens an overlong word on any line, not just the last", () => {
+    const { page, markers, home } = fixture();
+    markers.set("2026-11-09", { holidayName: `${"x".repeat(30)} Day`, hatch: [] });
+    const svg = renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home });
+    const row = svg.split(">Nov 9<")[1]!.split(/>(Sun|Mon|Tue|Wed|Thu|Fri|Sat)</)[0]!;
+    const lines = [...row.matchAll(/font-size="9">([^<]*)</g)].map((m) => m[1]!);
+    for (const line of lines) expect(line.length).toBeLessThanOrEqual(26);
+    expect(lines.at(-1)).toBe("Day");
+  });
+});
+
+describe("version skew", () => {
+  it("says a newer file needs a newer page", () => {
+    expect(() => parseNightsFile({ schema: "sleep-truth/nights", version: 2, source: {}, periods: [] })).toThrow(/newer Sleep Truth/);
   });
 });

@@ -1,4 +1,4 @@
-import type { NightsFile, Period } from "./nights.ts";
+import { offsetMinutes, type NightsFile, type Period } from "./nights.ts";
 
 /** The fields of an Oura v2 `sleep` document that we use. */
 export interface OuraSleepDoc {
@@ -21,12 +21,14 @@ const PHASE: Record<string, string> = { "1": "D", "2": "L", "3": "R", "4": "W" }
 const MOVE: Record<string, string> = { "1": "0", "2": "1", "3": "2", "4": "3" };
 const DROPPED_TYPES = new Set(["deleted", "rest"]);
 
-function stagesOf(doc: OuraSleepDoc): string | null {
+function stagesOf(doc: OuraSleepDoc): { stages: string; native: number } | null {
   let digits = doc.sleep_phase_30_sec;
+  let native = 30;
   if (!digits) {
     const five = doc.sleep_phase_5_min;
     if (!five) return null;
     digits = [...five].map((c) => c.repeat(10)).join("");
+    native = 300;
   }
   let out = "";
   for (const c of digits) {
@@ -34,7 +36,7 @@ function stagesOf(doc: OuraSleepDoc): string | null {
     if (!s) return null;
     out += s;
   }
-  return out;
+  return { stages: out, native };
 }
 
 function movementOf(doc: OuraSleepDoc, length: number): string {
@@ -42,12 +44,24 @@ function movementOf(doc: OuraSleepDoc, length: number): string {
   return [...raw].map((c) => MOVE[c] ?? "0").join("").padEnd(length, "0");
 }
 
+function hasOffset(iso: string): boolean {
+  try {
+    offsetMinutes(iso);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function toPeriod(doc: OuraSleepDoc): Period | null {
+  // Rows are placed on the wearable's local clock, so a timestamp without an offset cannot be drawn.
+  if (!hasOffset(doc.bedtime_start) || !hasOffset(doc.bedtime_end)) return null;
   const start = Date.parse(doc.bedtime_start);
   const end = Date.parse(doc.bedtime_end);
   if (!(end > start)) return null;
-  const stages = stagesOf(doc);
-  if (!stages) return null;
+  const parsed = stagesOf(doc);
+  if (!parsed) return null;
+  const { stages, native } = parsed;
   const asleep = doc.total_sleep_duration ?? [...stages].filter((s) => s !== "W").length * 30;
   return {
     id: `oura:${doc.id}`,
@@ -58,6 +72,7 @@ function toPeriod(doc: OuraSleepDoc): Period | null {
     stages,
     movement: movementOf(doc, stages.length),
     totals: { asleep_s: asleep, in_bed_s: doc.time_in_bed },
+    ...(native > 30 ? { native_epoch_seconds: native } : {}),
   };
 }
 
