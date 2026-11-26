@@ -204,7 +204,7 @@ describe("source line", () => {
     const plain = text(renderPage(page, new Map(), { title: "T", pageNo: 1, pageCount: 1, home, device: "oura" }));
     expect(plain).toContain("Oura Ring · 30-second stages ·");
     const coarse = text(renderPage(page, markers, { title: "T", pageNo: 1, pageCount: 1, home, device: "oura", coarseNights: 2 }));
-    expect(coarse).toContain("30-second stages (2 nights only had 5-minute stages)");
+    expect(coarse).toContain("2 nights have only 5-minute stages");
     expect(coarse).toContain("5-min stages");
   });
 });

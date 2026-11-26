@@ -234,9 +234,13 @@ export function renderPage(page: Page, markers: Map<ISODate, RowMarkers>, ctx: R
   const home = ctx.home === null ? "" : ` (home ${formatOffset(ctx.home)})`;
   const device = ctx.device === undefined ? "" : `${DEVICE_NAMES[ctx.device] ?? ctx.device} · `;
   const coarseCount = ctx.coarseNights ?? 0;
-  const coarse = coarseCount > 0 ? ` (${coarseCount} night${coarseCount === 1 ? "" : "s"} only had 5-minute stages)` : "";
-  const sourceLine = `${device}30-second stages${coarse} · local clock time${home} · rows start on the evening shown`;
+  const sourceLine = `${device}30-second stages · local clock time${home} · rows start on the evening shown`;
   s += `<text x="${GX}" y="62" font-size="10.5" fill="#444444">${escapeXml(sourceLine)}</text>`;
+  if (coarseCount > 0) {
+    // Its own line: the source line already runs up to the legend.
+    const nights = coarseCount === 1 ? "1 night has" : `${coarseCount} nights have`;
+    s += `<text x="${GX}" y="76" font-size="10.5" fill="#444444">${nights} only 5-minute stages, marked “5-min stages”.</text>`;
+  }
   s += drawLegend(fills);
 
   let y = 96;
