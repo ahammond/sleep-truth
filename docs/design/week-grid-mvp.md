@@ -254,14 +254,23 @@ data. Andrew picked drawing style A.
 ## 6. Risks and open items
 
 - **R1, CORS allowlist.** Decides hosted path versus app path later. Not
-  on this iteration's critical path. Probe it once Andrew's Oura app
-  exists: register a candidate origin as a redirect URI and repeat the
-  preflight. Record the result.
-- **R2, loopback redirect.** Unverified that Oura accepts a
-  `http://localhost` redirect URI. First task of the build checks it. If
-  refused, fall back to pasting the redirected URL back into the CLI.
-- **R3, Oura developer terms.** The README's first roadmap item. Read them
-  before anything beyond personal use.
+  on this iteration's critical path. Probed 2026-11-26 with the Sleep Truth
+  app registered, its website `https://sleep-truth.agh1973.com` and both
+  redirect URIs on file. A preflight to `/v2/usercollection/sleep` returns
+  400 `Disallowed CORS origin` for both `http://localhost:8765` and
+  `https://sleep-truth.agh1973.com`. Registering an origin does not open
+  CORS. The browser still cannot call Oura, so the CLI stays.
+- **R2, loopback redirect.** Oura accepts `http://localhost:8765/callback`
+  as a redirect URI. `login` completed through the local callback on the
+  first try. `https://sleep-truth.agh1973.com/callback/` is also registered
+  for `login --paste`; the trailing slash matters, because the site
+  redirects `/callback` to `/callback/` and drops the query string.
+- **R3, Oura developer terms.** Read. The API Agreement (effective
+  2026-06-08) needs a privacy policy, deletion on request, and retention no
+  longer than necessary once other people authorize the app. The site's
+  privacy policy and terms, and `sleep-truth forget`, answer those. Keeping
+  each user on their own login, with no relay, keeps Sleep Truth outside the
+  agreement's Aggregator definition.
 - **R4, DST and offset changes inside one period.** The 30 s string is
   elapsed time. Plot each period on the clock of its start offset; mark
   the row with the time-change marker when start and end offsets differ.

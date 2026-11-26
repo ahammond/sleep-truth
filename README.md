@@ -126,14 +126,15 @@ tracking — lives in the [vision & MRD](vision-mrd.md).
 Needs [mise](https://mise.jdx.dev). It installs the pinned Node and pnpm.
 
 1. Register an Oura API application at
-   <https://cloud.ouraring.com/oauth/applications>. Set the redirect URI to
-   `http://localhost:8765/callback`.
+   <https://developer.ouraring.com/applications>. Set the redirect URI to
+   `http://localhost:8765/callback`, and tick the `daily` scope.
 2. Write `~/.config/sleep-truth/config.json`:
    `{ "client_id": "…", "client_secret": "…" }`
 3. Install and build: `mise exec -- pnpm install`, then
    `mise exec -- pnpm -C packages/web build`.
 4. Log in and fetch: `mise exec -- pnpm -C packages/cli start -- login`, then
-   `mise exec -- pnpm -C packages/cli start -- sync`. If the browser cannot
+   `mise exec -- pnpm -C packages/cli start -- sync`. The first sync fetches a
+   year; add `--since YYYY-MM-DD` to fetch less. If the browser cannot
    reach the callback, use `login --paste` and paste the redirected URL.
 5. Export: `mise exec -- pnpm -C packages/cli start -- export --from 2026-11-01 --to 2026-11-28 -o ~/sleep.nights.json`.
    Keep the file outside the repo.
