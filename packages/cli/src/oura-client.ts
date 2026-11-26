@@ -1,5 +1,5 @@
 import type { OuraSleepDoc } from "@sleep-truth/core";
-import type { FetchFn } from "./auth.ts";
+import { SignInError, type FetchFn } from "./auth.ts";
 
 type SleepResponse = { data?: OuraSleepDoc[]; next_token?: string | null };
 export type SleepFn = (milliseconds: number) => Promise<void>;
@@ -20,26 +20,36 @@ export class OuraClient {
 
   async listSleep(start: string, end: string): Promise<OuraSleepDoc[]> {
     const docs: OuraSleepDoc[] = [];
+    const seen = new Set<string>();
     let nextToken: string | undefined;
     do {
       const page = await this.fetchPage(start, end, nextToken);
       docs.push(...page.data);
       nextToken = page.next_token;
+      if (nextToken !== undefined) {
+        if (seen.has(nextToken)) throw new Error("Oura repeated a next_token; stopping so sync does not loop forever");
+        seen.add(nextToken);
+      }
     } while (nextToken);
     return docs;
   }
 
   private async fetchPage(start: string, end: string, nextToken?: string): Promise<{ data: OuraSleepDoc[]; next_token?: string }> {
     let retry429 = 0;
-    let retry401 = false;
+    let retried401 = false;
+    let forceRefresh = false;
     for (;;) {
       const query = new URLSearchParams({ start_date: start, end_date: end });
       if (nextToken) query.set("next_token", nextToken);
+      const token = await this.getToken(forceRefresh);
+      forceRefresh = false;
       const response = await this.fetchFn(`${endpoint}?${query}`, {
-        headers: { Authorization: `Bearer ${await this.getToken(retry401)}`, "User-Agent": "sleep-truth/0.1" },
+        headers: { Authorization: `Bearer ${token}`, "User-Agent": "sleep-truth/0.1" },
       });
-      if (response.status === 401 && !retry401) {
-        retry401 = true;
+      if (response.status === 401) {
+        if (retried401) throw new SignInError("Oura rejected the sign-in.");
+        retried401 = true;
+        forceRefresh = true;
         continue;
       }
       if (response.status === 429) {

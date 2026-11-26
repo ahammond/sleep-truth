@@ -2,7 +2,7 @@ import { eveningOf, normalizeOura, parseNightsFile, type NightsFile, type OuraSl
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function checkDate(name: string, value: string): void {
+export function checkDate(name: string, value: string): void {
   if (!DATE.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
     throw new Error(`${name} must be a date as YYYY-MM-DD, got "${value}"`);
   }

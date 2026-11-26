@@ -67,3 +67,32 @@ describe("OuraClient against the published response shape", () => {
     await expect(client.listSleep("2026-01-01", "2026-01-03")).resolves.toEqual([{ id: "a" }, { id: "b" }]);
   });
 });
+
+describe("OuraClient retries", () => {
+  it("refreshes the token once, not on every 429 retry after a 401", async () => {
+    const forced: boolean[] = [];
+    const statuses = [401, 429, 429, 200];
+    let i = 0;
+    const client = new OuraClient(async (forceRefresh) => {
+      forced.push(forceRefresh === true);
+      return "token";
+    }, async () => {
+      const status = statuses[i++]!;
+      return status === 200 ? json({ data: [{ id: "a" }] }) : json({}, status, { "Retry-After": "0" });
+    }, async () => {});
+    await expect(client.listSleep("2026-01-01", "2026-01-02")).resolves.toEqual([{ id: "a" }]);
+    expect(forced).toEqual([false, true, false, false]);
+  });
+
+  it("stops when Oura repeats a next_token", async () => {
+    const client = new OuraClient(async () => "token", async () => json({ data: [{ id: "a" }], next_token: "same" }));
+    await expect(client.listSleep("2026-01-01", "2026-01-02")).rejects.toThrow(/repeated.*next_token/i);
+  });
+});
+
+describe("OuraClient sign-in", () => {
+  it("says to log in when a refreshed token is still rejected", async () => {
+    const client = new OuraClient(async () => "token", async () => json({}, 401));
+    await expect(client.listSleep("2026-01-01", "2026-01-02")).rejects.toThrow(/sleep-truth login/);
+  });
+});

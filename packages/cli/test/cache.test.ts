@@ -1,4 +1,4 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -25,5 +25,26 @@ describe("cache and paths", () => {
     expect(paths({ HOME: "/home/test" })).toEqual({
       config: "/home/test/.config/sleep-truth/config.json", tokens: "/home/test/.config/sleep-truth/tokens.json", dataDir: "/home/test/.local/share/sleep-truth", cacheDir: "/home/test/.local/share/sleep-truth/oura/sleep",
     });
+  });
+});
+
+describe("cache privacy and damage", () => {
+  it("keeps the cache readable only by the user", async () => {
+    const dir = join(await mkdtemp(join(tmpdir(), "sleep-truth-cache-")), "sleep");
+    await mkdir(dir, { mode: 0o755 });
+    await writeFile(join(dir, "old.json"), "{}", { mode: 0o644 });
+    await writeDocs(dir, [doc]);
+    expect((await stat(dir)).mode & 0o777).toBe(0o700);
+    const written = (await readdir(dir)).filter((name) => name !== "old.json");
+    expect((await stat(join(dir, written[0]!))).mode & 0o777).toBe(0o600);
+  });
+
+  it("skips a damaged file and names it instead of failing", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "sleep-truth-cache-"));
+    await writeDocs(dir, [doc]);
+    await writeFile(join(dir, "broken.json"), "{ not json");
+    const damaged: string[] = [];
+    await expect(readDocs(dir, (file) => damaged.push(file))).resolves.toEqual([doc]);
+    expect(damaged).toEqual([join(dir, "broken.json")]);
   });
 });

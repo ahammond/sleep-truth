@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
-import { createServer } from "node:http";
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { spawn } from "node:child_process";
 import { authorizeUrl, exchangeCode, readTokens, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "./auth.ts";
 import { readDocs, writeDocs } from "./cache.ts";
-import { exportNights } from "./export.ts";
+import { codeFrom, waitForCallback } from "./callback.ts";
+import { checkDate, exportNights } from "./export.ts";
 import { forget } from "./forget.ts";
 import { OuraClient } from "./oura-client.ts";
 import { readPastedUrl } from "./paste.ts";
@@ -27,8 +27,27 @@ function configFrom(value: unknown): Config {
   return { client_id: record.client_id, client_secret: record.client_secret, redirect_port: record.redirect_port ?? 8765, redirect_uri };
 }
 
+const GUIDE = "https://sleep-truth.agh1973.com/start/";
+
 async function readConfig(path: string): Promise<Config> {
-  return configFrom(JSON.parse(await readFile(path, "utf8")));
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`No settings file at ${path}.\nSet up your device first: ${GUIDE}`);
+    throw error;
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new Error(`The settings file at ${path} is not valid JSON.\nSee ${GUIDE}`);
+  }
+  return configFrom(value);
+}
+
+function warnDamaged(file: string): void {
+  console.error(`Skipped a damaged cache file: ${file}\nThe next sync over that date replaces it.`);
 }
 
 function verifier(): string {
@@ -37,22 +56,6 @@ function verifier(): string {
 
 function challenge(value: string): string {
   return createHash("sha256").update(value).digest("base64url");
-}
-
-async function redirectedUrlFromServer(port: number, expectedState: string, onListening: () => void): Promise<URL> {
-  return new Promise((resolve, reject) => {
-    const server = createServer((request, response) => {
-      const url = new URL(request.url ?? "/", `http://localhost:${port}`);
-      if (url.pathname !== "/callback") { response.writeHead(404).end(); return; }
-      response.setHeader("content-type", "text/plain");
-      response.end("Sleep Truth login complete. You can close this tab.");
-      server.close();
-      if (url.searchParams.get("state") !== expectedState) reject(new Error("OAuth state did not match"));
-      else resolve(url);
-    });
-    server.once("error", reject);
-    server.listen(port, "127.0.0.1", onListening);
-  });
 }
 
 
@@ -68,10 +71,10 @@ async function login(paste: boolean): Promise<void> {
   const codeVerifier = verifier();
   const url = authorizeUrl(config, state, challenge(codeVerifier));
   console.log(url);
-  const callback = usesPasteMode(config, paste) ? await readPastedUrl(process.stdin, process.stdout) : await redirectedUrlFromServer(config.redirect_port, state, () => openUrl(url));
-  if (callback.searchParams.get("state") !== state) throw new Error("OAuth state did not match");
-  const code = callback.searchParams.get("code");
-  if (!code) throw new Error("OAuth callback did not include code");
+  const callback = usesPasteMode(config, paste)
+    ? await readPastedUrl(process.stdin, process.stdout)
+    : await waitForCallback({ port: config.redirect_port, expectedState: state, onListening: () => openUrl(url) });
+  const code = codeFrom(callback, state);
   await writeTokens(location.tokens, await exchangeCode(config, code, codeVerifier));
   console.log("Login complete.");
 }
@@ -80,9 +83,10 @@ function utcDate(date: Date): string { return date.toISOString().slice(0, 10); }
 function shiftDate(date: string, days: number): string { return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10); }
 
 async function sync(since: string | undefined): Promise<void> {
+  if (since !== undefined) checkDate("--since", since);
   const location = paths();
   const config = await readConfig(location.config);
-  const docs = await readDocs(location.cacheDir);
+  const docs = await readDocs(location.cacheDir, warnDamaged);
   const newest = docs.map((doc) => doc.day).filter((day): day is string => typeof day === "string").sort().at(-1);
   const start = since ?? (newest ? shiftDate(newest, -3) : shiftDate(utcDate(new Date()), -365));
   // One day past today, in case Oura treats end_date as exclusive.
@@ -102,8 +106,9 @@ async function sync(since: string | undefined): Promise<void> {
 }
 
 async function exportFile(from: string, to: string, output: string): Promise<void> {
-  const result = exportNights(await readDocs(paths().cacheDir), from, to, new Date());
-  await writeFile(output, JSON.stringify(result.file, null, 2) + "\n");
+  const result = exportNights(await readDocs(paths().cacheDir, warnDamaged), from, to, new Date());
+  await writeFile(output, JSON.stringify(result.file, null, 2) + "\n", { mode: 0o600 });
+  await chmod(output, 0o600);
   console.log(`exported ${result.file.periods.length} periods (skipped ${result.skipped}) to ${output}`);
 }
 

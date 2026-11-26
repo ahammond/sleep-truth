@@ -2,7 +2,7 @@ import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { authorizeUrl, exchangeCode, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "../src/auth.ts";
+import { authorizeUrl, exchangeCode, readTokens, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "../src/auth.ts";
 
 const config: Config = { client_id: "client id", client_secret: "secret value", redirect_port: 8765 };
 
@@ -80,5 +80,18 @@ describe("auth", () => {
     await writeTokens(path, tokens);
     expect(JSON.parse(await readFile(path, "utf8"))).toEqual(tokens);
     expect((await stat(path)).mode & 0o777).toBe(0o600);
+  });
+});
+
+describe("sign-in failures tell the user what to run", () => {
+  it("says to log in when there are no tokens yet", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "sleep-truth-auth-"));
+    await expect(readTokens(join(dir, "tokens.json"))).rejects.toThrow(/Not signed in.*sleep-truth login/);
+  });
+
+  it("says to log in when Oura will not renew the sign-in", async () => {
+    const tokens: Tokens = { access_token: "a", refresh_token: "revoked", expires_at: 0 };
+    const rejected = async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 });
+    await expect(refresh(config, tokens, rejected)).rejects.toThrow(/sleep-truth login/);
   });
 });

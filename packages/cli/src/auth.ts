@@ -14,6 +14,14 @@ export interface Tokens {
   expires_at: number;
 }
 
+/** A failure the user fixes by signing in again. */
+export class SignInError extends Error {
+  constructor(reason: string) {
+    super(`${reason} Run: sleep-truth login`);
+    this.name = "SignInError";
+  }
+}
+
 export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 type Now = () => number;
 
@@ -53,12 +61,13 @@ export function authorizeUrl(config: Config, state: string, challenge: string): 
   return `https://cloud.ouraring.com/oauth/authorize?${query}`;
 }
 
-async function tokenRequest(config: Config, body: Record<string, string>, fetchFn: FetchFn, now: Now): Promise<Tokens> {
+async function tokenRequest(config: Config, body: Record<string, string>, fetchFn: FetchFn, now: Now, signInFailure?: string): Promise<Tokens> {
   const response = await fetchFn("https://api.ouraring.com/oauth/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ ...body, client_id: config.client_id, client_secret: config.client_secret }),
   });
+  if (signInFailure && (response.status === 400 || response.status === 401)) throw new SignInError(signInFailure);
   if (!response.ok) throw new Error(`Oura token request failed: ${response.status} ${response.statusText}`);
   const value: unknown = await response.json();
   if (!isTokenResponse(value)) throw new Error("Oura token response is missing required fields");
@@ -76,7 +85,7 @@ export function exchangeCode(config: Config, code: string, verifier: string, fet
 }
 
 export function refresh(config: Config, tokens: Tokens, fetchFn: FetchFn = fetch, now: Now = Date.now): Promise<Tokens> {
-  return tokenRequest(config, { grant_type: "refresh_token", refresh_token: tokens.refresh_token }, fetchFn, now);
+  return tokenRequest(config, { grant_type: "refresh_token", refresh_token: tokens.refresh_token }, fetchFn, now, "Oura would not renew the sign-in.");
 }
 
 export async function writeTokens(path: string, tokens: Tokens): Promise<void> {
@@ -86,8 +95,20 @@ export async function writeTokens(path: string, tokens: Tokens): Promise<void> {
 }
 
 export async function readTokens(path: string): Promise<Tokens> {
-  const value: unknown = JSON.parse(await readFile(path, "utf8"));
-  if (!isStoredTokens(value)) throw new Error(`Invalid tokens file: ${path}`);
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new SignInError("Not signed in.");
+    throw error;
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new SignInError(`The saved sign-in at ${path} is damaged.`);
+  }
+  if (!isStoredTokens(value)) throw new SignInError(`The saved sign-in at ${path} is damaged.`);
   return value;
 }
 
