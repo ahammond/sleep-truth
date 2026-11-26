@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildRows,
   groupWeeks,
+  newestFirst,
   holidayMap,
   homeOffset,
   markRows,
@@ -48,7 +49,7 @@ function fixture(): { page: Page; markers: Map<ISODate, RowMarkers>; home: numbe
   const rows = buildRows(periods, "2026-11-08", "2026-11-21");
   const m = markRows(rows, holidayMap({ country: "CA", state: "BC" }, [2026]));
   const markers = new Map(rows.map((r, i) => [r.evening, m[i]!]));
-  const pages = paginate(groupWeeks(rows));
+  const pages = paginate(newestFirst(groupWeeks(rows)));
   return { page: pages[0]!, markers, home: homeOffset(rows) };
 }
 
@@ -75,6 +76,15 @@ const DISCLAIMER =
 describe("renderPage", () => {
   it("contains the page number", () => {
     expect(text(render())).toContain("Page 1 of 1");
+  });
+
+  it("draws the time zone boundary between the changed night and the earlier night below it", () => {
+    const svg = render();
+    const labelY = (d: string) => Number(svg.match(new RegExp(`<text x="\\d+" y="([\\d.]+)" font-size="12">${d}</text>`))![1]);
+    const dashes = [...svg.matchAll(/<line [^>]*y1="([\d.]+)"[^>]*stroke-dasharray="4,2"/g)].map((m) => Number(m[1]));
+    expect(dashes).toHaveLength(1);
+    expect(dashes[0]!).toBeGreaterThan(labelY("Nov 19"));
+    expect(dashes[0]!).toBeLessThan(labelY("Nov 18"));
   });
 
   it("bakes the disclaimer into every page in both palettes", () => {

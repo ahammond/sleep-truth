@@ -196,7 +196,9 @@ Reference mockup: [`week-grid-mockup.html`](week-grid-mockup.html), made-up
 data. Andrew picked drawing style A.
 
 - **Paper:** US Letter landscape, two weeks per page.
-- **Weeks:** Sunday to Saturday. A row is labelled by the **evening the
+- **Weeks:** Sunday-to-Saturday weeks, shown newest night first: the
+  weeks and the days inside them both descend, so dates run without a
+  break. The time zone boundary line sits below the changed row. A row is labelled by the **evening the
   night starts** ("Fri Nov 13" is Friday night). Missing nights show an
   empty row with "no data". Partial first and last weeks keep empty rows
   so columns stay aligned.
@@ -282,7 +284,7 @@ data. Andrew picked drawing style A.
 - SPA for presentation plus CLI for sourcing (approach 3).
 - Four stages (Awake, REM, Light, Deep) with a movement strip below.
 - Local clock time; mark time zone changes.
-- Sunday to Saturday rows, stacked week by week, newest week first.
+- Sunday-to-Saturday weeks, newest night first, so dates descend without a break.
 - Markers for interesting days: public holidays only.
 - Drawing style A (gray blocks).
 - Direction: toward a tool a sleep doctor can share with other doctors

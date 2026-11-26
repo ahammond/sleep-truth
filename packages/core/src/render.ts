@@ -165,7 +165,8 @@ function drawRow(r: Row, m: RowMarkers | undefined, y0: number, fills: Record<St
     s += `<text x="${GX}" y="${y0 + 26 + i * 10}" font-size="9">${escapeXml(note)}</text>`;
   });
   if (m?.tzChange) {
-    s += `<line x1="${CX - 6}" x2="${CX + CW}" y1="${n(y0 - 3.5)}" y2="${n(y0 - 3.5)}" stroke="${BLACK}" stroke-width="0.8" stroke-dasharray="4,2"/>`;
+    // Rows run newest first, so the earlier night, on the old offset, is the row below.
+    s += `<line x1="${CX - 6}" x2="${CX + CW}" y1="${n(y0 + ROW_H - 3.5)}" y2="${n(y0 + ROW_H - 3.5)}" stroke="${BLACK}" stroke-width="0.8" stroke-dasharray="4,2"/>`;
   }
   if (r.placed.length === 0) {
     s += `<text x="${CX + 8}" y="${y0 + 18}" font-size="10" fill="#888888">no data</text>`;

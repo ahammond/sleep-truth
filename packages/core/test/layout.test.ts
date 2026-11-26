@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRows, eveningOf, groupWeeks, paginate, type Row } from "../src/index.ts";
+import { buildRows, eveningOf, groupWeeks, newestFirst, paginate, type Row } from "../src/index.ts";
 import { hours, period } from "./helpers/period.ts";
 
 function row(rows: Row[], evening: string): Row {
@@ -126,6 +126,17 @@ describe("eveningOf", () => {
   it("names the row a period lands on, naps included", () => {
     expect(eveningOf(period({ start: "2026-11-19T01:10:00-07:00", stages: hours(6) }))).toBe("2026-11-18");
     expect(eveningOf(period({ start: "2026-11-19T14:00:00-07:00", stages: hours(0.5) }))).toBe("2026-11-19");
+  });
+});
+
+describe("newestFirst", () => {
+  it("reverses weeks and the days inside them, so dates descend without a break", () => {
+    const rows = buildRows([], "2026-11-08", "2026-11-21");
+    const weeks = newestFirst(groupWeeks(rows));
+    expect(weeks.map((w) => w.sunday)).toEqual(["2026-11-15", "2026-11-08"]);
+    expect(weeks.flatMap((w) => w.rows.map((r) => r.evening))).toEqual(
+      Array.from({ length: 14 }, (_, i) => `2026-11-${String(21 - i).padStart(2, "0")}`),
+    );
   });
 });
 

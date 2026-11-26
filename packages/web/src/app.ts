@@ -3,6 +3,7 @@ import {
   eveningOf,
   formatRange,
   groupWeeks,
+  newestFirst,
   holidayMap,
   homeOffset,
   markRows,
@@ -61,8 +62,7 @@ export function renderReport(fileText: string, settings: Settings): Report {
   const marks = markRows(rows, holidayMap(settings.region, years));
   const markers = new Map<ISODate, RowMarkers>(rows.map((r, i) => [r.evening, marks[i]!]));
   const home = homeOffset(rows);
-  // Newest week first: the reader starts with now and goes back in time.
-  const pages = paginate(groupWeeks(rows).reverse());
+  const pages = paginate(newestFirst(groupWeeks(rows)));
   const title = `Sleep, night by night · ${formatRange(from, to)}`;
   return {
     pages: pages.map((page, i) =>

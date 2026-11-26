@@ -42,6 +42,12 @@ describe("renderReport", () => {
     expect(r.pages[1]).toContain("Week of Nov 8");
   });
 
+  it("days run newest first too, so dates descend without a break", () => {
+    const r = renderReport(nightsFile("2026-11-08", 21), BASE);
+    const days = [...r.pages.join("").matchAll(/<text[^>]*>Nov (\d+)<\/text>/g)].map((m) => Number(m[1]));
+    expect(days).toEqual(Array.from({ length: 21 }, (_, i) => 28 - i));
+  });
+
   it("bad file gives an error, no throw", () => {
     const r = renderReport("{}", BASE);
     expect(r.error).toMatch(/schema/);

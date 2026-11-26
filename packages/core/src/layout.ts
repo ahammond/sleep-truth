@@ -200,6 +200,14 @@ export function groupWeeks(rows: Row[]): Week[] {
   });
 }
 
+/**
+ * Newest night first, weeks and days alike, so dates descend without a break.
+ * Rendering assumes this order: the earlier night sits below each row.
+ */
+export function newestFirst(weeks: Week[]): Week[] {
+  return [...weeks].reverse().map((w) => ({ ...w, rows: [...w.rows].reverse() }));
+}
+
 export function paginate(weeks: Week[], perPage = 2): Page[] {
   const pages: Page[] = [];
   for (let i = 0; i < weeks.length; i += perPage) pages.push({ weeks: weeks.slice(i, i + perPage) });
