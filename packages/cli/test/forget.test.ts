@@ -48,3 +48,39 @@ describe("forget", () => {
     await forget(location, async () => new Response(null, { status: 200 }), () => {});
   });
 });
+
+describe("forget messages", () => {
+  it("says nothing about a token file when there never was one", async () => {
+    const location = await fixture();
+    const messages: string[] = [];
+    await forget(location, async () => new Response(null, { status: 200 }), (message) => messages.push(message));
+    expect(messages.join("\n")).not.toMatch(/Could not read/);
+  });
+
+  it("tells the user to remove access by hand when the token file is damaged", async () => {
+    const location = await fixture();
+    await writeFile(location.tokens, "{ damaged");
+    const messages: string[] = [];
+    await forget(location, async () => new Response(null, { status: 200 }), (message) => messages.push(message));
+    expect(messages.join("\n")).toMatch(/cloud\.ouraring\.com/);
+  });
+
+  it("refuses to delete a relative data directory", async () => {
+    const location = await fixture();
+    await expect(forget({ ...location, dataDir: "sleep-truth" }, async () => new Response(null, { status: 200 }), () => {})).rejects.toThrow(/absolute/);
+  });
+
+  it("renews an expired token before revoking it", async () => {
+    const location = await fixture();
+    await writeFile(location.config, JSON.stringify({ client_id: "id", client_secret: "secret" }));
+    await writeFile(location.tokens, JSON.stringify({ access_token: "stale", refresh_token: "refresh", expires_at: 1 }));
+    const revoked: string[] = [];
+    await forget(location, async (input) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.pathname === "/oauth/token") return new Response(JSON.stringify({ access_token: "fresh", refresh_token: "r2", expires_in: 60 }), { status: 200 });
+      revoked.push(url.searchParams.get("access_token") ?? "");
+      return new Response(null, { status: 200 });
+    }, () => {});
+    expect(revoked).toEqual(["fresh"]);
+  });
+});

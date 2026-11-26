@@ -48,3 +48,16 @@ describe("cache privacy and damage", () => {
     expect(damaged).toEqual([join(dir, "broken.json")]);
   });
 });
+
+describe("paths ignore unusable environment values", () => {
+  it("treats empty or relative XDG and HOME values as unset", () => {
+    const p = paths({ HOME: "/home/test", XDG_CONFIG_HOME: "", XDG_DATA_HOME: "relative/dir" });
+    expect(p.config).toBe("/home/test/.config/sleep-truth/config.json");
+    expect(p.dataDir).toBe("/home/test/.local/share/sleep-truth");
+  });
+
+  it("never returns a relative path, even with an empty HOME", () => {
+    const p = paths({ HOME: "" });
+    for (const value of Object.values(p)) expect(value.startsWith("/")).toBe(true);
+  });
+});

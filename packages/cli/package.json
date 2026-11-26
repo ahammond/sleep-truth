@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "sleep-truth": "src/main.ts" },
-  "scripts": { "start": "node src/main.ts" },
+  "description": "Run it through bin/sleep-truth at the repo root.",
   "dependencies": { "@sleep-truth/core": "workspace:*" }
 }

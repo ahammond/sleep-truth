@@ -2,6 +2,13 @@ import { createServer } from "node:net";
 import { describe, expect, it } from "vitest";
 import { codeFrom, waitForCallback } from "../src/callback.ts";
 
+// Some hosts (many CI containers) have no IPv6 loopback; the code tolerates that, so the test does too.
+const hasIpv6Loopback = await new Promise<boolean>((resolve) => {
+  const probe = createServer();
+  probe.once("error", () => resolve(false));
+  probe.listen(0, "::1", () => probe.close(() => resolve(true)));
+});
+
 async function freePort(): Promise<number> {
   return new Promise((resolve) => {
     const server = createServer();
@@ -43,17 +50,36 @@ describe("waitForCallback", () => {
     await expect(result).resolves.toBeInstanceOf(URL);
   });
 
-  it("answers failure and rejects on a wrong state", async () => {
+  it("answers a stray request and keeps waiting for the real redirect", async () => {
     const port = await freePort();
     const { listening, result } = started(port);
     await listening;
-    const response = await fetch(`http://127.0.0.1:${port}/callback?state=bad&code=abc`);
-    expect(response.status).toBe(400);
-    expect(await response.text()).toMatch(/failed/);
-    await expect(result).rejects.toThrow(/did not come from this sign-in/);
+    const stray = await fetch(`http://127.0.0.1:${port}/callback?state=bad&code=abc`);
+    expect(stray.status).toBe(400);
+    const real = await fetch(`http://127.0.0.1:${port}/callback?state=good&code=abc`);
+    expect(real.status).toBe(200);
+    await expect(result).resolves.toBeInstanceOf(URL);
   });
 
-  it("answers on the IPv6 loopback too", async () => {
+  it("rejects a declined sign-in", async () => {
+    const port = await freePort();
+    const { listening, result } = started(port);
+    await listening;
+    const response = await fetch(`http://127.0.0.1:${port}/callback?state=good&error=access_denied`);
+    expect(response.status).toBe(400);
+    await expect(result).rejects.toThrow(/access_denied/);
+  });
+
+  it("suggests --paste when the port is taken", async () => {
+    const port = await freePort();
+    const blocker = createServer().listen(port, "127.0.0.1");
+    await new Promise((resolve) => blocker.once("listening", resolve));
+    const { result } = started(port);
+    await expect(result).rejects.toThrow(/sleep-truth login --paste/);
+    blocker.close();
+  });
+
+  it.skipIf(!hasIpv6Loopback)("answers on the IPv6 loopback too", async () => {
     const port = await freePort();
     const { listening, result } = started(port);
     await listening;

@@ -14,11 +14,22 @@ export interface Tokens {
   expires_at: number;
 }
 
+/** Sent on every request to Oura. */
+export const USER_AGENT = "sleep-truth/0.1";
+
 /** A failure the user fixes by signing in again. */
 export class SignInError extends Error {
   constructor(reason: string) {
     super(`${reason} Run: sleep-truth login`);
     this.name = "SignInError";
+  }
+}
+
+/** No sign-in has been saved yet. */
+export class NotSignedInError extends SignInError {
+  constructor() {
+    super("Not signed in.");
+    this.name = "NotSignedInError";
   }
 }
 
@@ -40,6 +51,12 @@ export function validateRedirectUri(value: string): string {
     throw new Error("Config redirect_uri must be an absolute http or https URL");
   }
   return value;
+}
+
+/** Where the local server must listen to receive a loopback redirect. */
+export function loopbackCallback(config: Config): { port: number; path: string } {
+  const url = new URL(redirectUri(config));
+  return { port: url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80, path: url.pathname };
 }
 
 export function usesPasteMode(config: Config, requested: boolean): boolean {
@@ -64,7 +81,7 @@ export function authorizeUrl(config: Config, state: string, challenge: string): 
 async function tokenRequest(config: Config, body: Record<string, string>, fetchFn: FetchFn, now: Now, signInFailure?: string): Promise<Tokens> {
   const response = await fetchFn("https://api.ouraring.com/oauth/token", {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: { "content-type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
     body: new URLSearchParams({ ...body, client_id: config.client_id, client_secret: config.client_secret }),
   });
   if (signInFailure && (response.status === 400 || response.status === 401)) throw new SignInError(signInFailure);
@@ -89,7 +106,7 @@ export function refresh(config: Config, tokens: Tokens, fetchFn: FetchFn = fetch
 }
 
 export async function writeTokens(path: string, tokens: Tokens): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   await writeFile(path, JSON.stringify(tokens, null, 2) + "\n", { mode: 0o600 });
   await chmod(path, 0o600);
 }
@@ -99,7 +116,7 @@ export async function readTokens(path: string): Promise<Tokens> {
   try {
     text = await readFile(path, "utf8");
   } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new SignInError("Not signed in.");
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new NotSignedInError();
     throw error;
   }
   let value: unknown;

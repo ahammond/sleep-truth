@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 
 export interface Paths {
   config: string;
@@ -8,10 +8,15 @@ export interface Paths {
   cacheDir: string;
 }
 
+/** An environment directory, or undefined when it is empty or relative. The XDG spec says to ignore both. */
+function absolute(value: string | undefined): string | undefined {
+  return value && isAbsolute(value) ? value : undefined;
+}
+
 export function paths(env: NodeJS.ProcessEnv = process.env): Paths {
-  const home = env.HOME ?? homedir();
-  const configHome = env.XDG_CONFIG_HOME ?? join(home, ".config");
-  const dataHome = env.XDG_DATA_HOME ?? join(home, ".local", "share");
+  const home = absolute(env.HOME) ?? homedir();
+  const configHome = absolute(env.XDG_CONFIG_HOME) ?? join(home, ".config");
+  const dataHome = absolute(env.XDG_DATA_HOME) ?? join(home, ".local", "share");
   const configDir = join(configHome, "sleep-truth");
   const dataDir = join(dataHome, "sleep-truth");
   return {

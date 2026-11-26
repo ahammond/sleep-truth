@@ -1,5 +1,5 @@
 import type { OuraSleepDoc } from "@sleep-truth/core";
-import { SignInError, type FetchFn } from "./auth.ts";
+import { SignInError, USER_AGENT, type FetchFn } from "./auth.ts";
 
 type SleepResponse = { data?: OuraSleepDoc[]; next_token?: string | null };
 export type SleepFn = (milliseconds: number) => Promise<void>;
@@ -44,7 +44,7 @@ export class OuraClient {
       const token = await this.getToken(forceRefresh);
       forceRefresh = false;
       const response = await this.fetchFn(`${endpoint}?${query}`, {
-        headers: { Authorization: `Bearer ${token}`, "User-Agent": "sleep-truth/0.1" },
+        headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT },
       });
       if (response.status === 401) {
         if (retried401) throw new SignInError("Oura rejected the sign-in.");

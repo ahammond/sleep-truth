@@ -2,7 +2,7 @@ import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { authorizeUrl, exchangeCode, readTokens, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "../src/auth.ts";
+import { authorizeUrl, exchangeCode, loopbackCallback, readTokens, refresh, usesPasteMode, validateRedirectUri, writeTokens, type Config, type Tokens } from "../src/auth.ts";
 
 const config: Config = { client_id: "client id", client_secret: "secret value", redirect_port: 8765 };
 
@@ -93,5 +93,15 @@ describe("sign-in failures tell the user what to run", () => {
     const tokens: Tokens = { access_token: "a", refresh_token: "revoked", expires_at: 0 };
     const rejected = async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 });
     await expect(refresh(config, tokens, rejected)).rejects.toThrow(/sleep-truth login/);
+  });
+});
+
+describe("loopbackCallback", () => {
+  it("listens where the default redirect points", () => {
+    expect(loopbackCallback(config)).toEqual({ port: 8765, path: "/callback" });
+  });
+  it("follows a localhost redirect_uri's own port and path", () => {
+    expect(loopbackCallback({ ...config, redirect_uri: "http://localhost:9000/cb" })).toEqual({ port: 9000, path: "/cb" });
+    expect(loopbackCallback({ ...config, redirect_uri: "http://127.0.0.1/callback" })).toEqual({ port: 80, path: "/callback" });
   });
 });

@@ -3,6 +3,8 @@ import { SignInError } from "./auth.ts";
 
 export interface CallbackOptions {
   port: number;
+  /** Path of the redirect URI. Defaults to /callback. */
+  path?: string;
   expectedState: string;
   /** Called once the server is listening, to open the browser. */
   onListening: () => void;
@@ -28,7 +30,7 @@ export function codeFrom(url: URL, expectedState: string): string {
  * Listens on both loopback addresses, because "localhost" can resolve to either.
  */
 export function waitForCallback(options: CallbackOptions): Promise<URL> {
-  const { port, expectedState, onListening, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const { port, path = "/callback", expectedState, onListening, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   return new Promise((resolve, reject) => {
     const servers: Server[] = [];
     let settled = false;
@@ -45,11 +47,17 @@ export function waitForCallback(options: CallbackOptions): Promise<URL> {
 
     const handler = (request: IncomingMessage, response: ServerResponse): void => {
       const url = new URL(request.url ?? "/", `http://localhost:${port}`);
-      if (url.pathname !== "/callback") {
+      if (url.pathname !== path) {
         response.writeHead(404).end();
         return;
       }
       response.setHeader("content-type", "text/plain; charset=utf-8");
+      // Anything without this sign-in's state is a stray request: a stale tab, or another page
+      // poking localhost. Answer it and keep waiting for the real redirect.
+      if (url.searchParams.get("state") !== expectedState) {
+        response.writeHead(400).end("This is not the sign-in Sleep Truth is waiting for. Use the newest sign-in tab.");
+        return;
+      }
       try {
         codeFrom(url, expectedState);
       } catch (error: unknown) {
@@ -68,7 +76,7 @@ export function waitForCallback(options: CallbackOptions): Promise<URL> {
           // A machine without IPv6 loopback is fine; IPv4 alone must work.
           if (host === "::1" && (error.code === "EADDRNOTAVAIL" || error.code === "EAFNOSUPPORT")) done(false);
           else {
-            const message = error.code === "EADDRINUSE" ? `Port ${port} is already in use. Close whatever uses it, or set redirect_port.` : error.message;
+            const message = error.code === "EADDRINUSE" ? `Port ${port} is already in use. Close the program using it, or run: sleep-truth login --paste` : error.message;
             finish(() => reject(new Error(message)));
             done(false);
           }

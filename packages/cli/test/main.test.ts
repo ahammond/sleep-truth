@@ -19,7 +19,7 @@ async function run(args: string[]) {
 }
 
 describe("CLI entrypoint", () => {
-  it("prints usage through pnpm's -- argument separator", async () => {
+  it("prints usage, ignoring a leading -- argument separator", async () => {
     const result = await execute("node", ["src/main.ts", "--", "--help"], { cwd });
     expect(result.stdout).toContain("Usage:");
   });

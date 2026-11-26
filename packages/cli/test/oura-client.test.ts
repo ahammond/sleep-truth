@@ -31,9 +31,10 @@ describe("OuraClient", () => {
     const client = new OuraClient(async (forceRefresh) => {
       forced.push(forceRefresh === true);
       return forceRefresh ? "fresh" : "expired";
-    }, async (_input, init) => {
+    }, async (input, init) => {
       attempts++;
-      return attempts === 1 ? json({}, 401) : json({ data: [{ id: "a" }] });
+      const sent = new Request(input, init).headers.get("authorization");
+      return sent === "Bearer fresh" ? json({ data: [{ id: "a" }] }) : json({}, 401);
     });
     await expect(client.listSleep("2026-01-01", "2026-01-02")).resolves.toEqual([{ id: "a" }]);
     expect(forced).toEqual([false, true]);
